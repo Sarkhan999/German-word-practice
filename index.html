@@ -1,0 +1,853 @@
+<title>Wortkiste</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout: one calm column like a card box; gender colours (der blue, die red, das green) carry the identity. */
+:root {
+  --bg: #F2F3F0; --surface: #FFFFFF; --ink: #15171C; --muted: #5B606C; --line: #D8DBD4;
+  --accent: #E3A900; --focus: #2457C5;
+  --der: #2457C5; --die: #C2323A; --das: #157A47; --none: #5F6573;
+  --der-bg: #E5ECFA; --die-bg: #FAE7E8; --das-bg: #E1F2E8; --none-bg: #EAEBEE;
+  --good: #157A47; --bad: #C2323A;
+  --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121418; --surface: #1B1E24; --ink: #ECEDEF; --muted: #9CA2AE; --line: #2D313A;
+  --accent: #F2B705; --focus: #8FB0F7;
+  --der: #86A9F6; --die: #F28A8F; --das: #6CCF98; --none: #A3A9B6;
+  --der-bg: #1C2741; --die-bg: #3A1D21; --das-bg: #16301F; --none-bg: #252830;
+  --good: #6CCF98; --bad: #F28A8F; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #121418; --surface: #1B1E24; --ink: #ECEDEF; --muted: #9CA2AE; --line: #2D313A;
+  --accent: #F2B705; --focus: #8FB0F7;
+  --der: #86A9F6; --die: #F28A8F; --das: #6CCF98; --none: #A3A9B6;
+  --der-bg: #1C2741; --die-bg: #3A1D21; --das-bg: #16301F; --none-bg: #252830;
+  --good: #6CCF98; --bad: #F28A8F; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.5; }
+.wrap { max-width: 760px; margin: 0 auto; padding-block: 20px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 18px; }
+h1, h2, h3 { font-family: var(--display); margin: 0; line-height: 1.1; text-wrap: balance; }
+h2 { font-size: 1.6rem; font-weight: 700; }
+p { margin: 0; }
+.muted { color: var(--muted); }
+.small { font-size: .9rem; }
+
+.g-der { --g: var(--der); --gbg: var(--der-bg); }
+.g-die { --g: var(--die); --gbg: var(--die-bg); }
+.g-das { --g: var(--das); --gbg: var(--das-bg); }
+.g-none { --g: var(--none); --gbg: var(--none-bg); }
+.gword { color: var(--g); }
+.chip { display: inline-block; background: var(--gbg); color: var(--g); font-weight: 600; font-size: .8rem;
+  padding: 2px 9px; border-radius: 999px; letter-spacing: .02em; white-space: nowrap; }
+
+header { display: flex; flex-direction: column; gap: 14px; }
+.brand { display: flex; align-items: center; gap: 12px; }
+.mark { display: grid; grid-template-columns: repeat(3, 9px); gap: 3px; }
+.mark i { height: 26px; border-radius: 2px; background: var(--g); }
+h1 { font-size: 2.3rem; font-weight: 700; letter-spacing: .01em; }
+.brand p { color: var(--muted); font-size: .92rem; }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; min-width: 0; }
+.stat b { display: block; font-family: var(--display); font-size: 1.7rem; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.stat span { font-size: .72rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+@media (max-width: 480px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.note { background: var(--surface); border: 1px dashed var(--line); padding: 10px 14px; border-radius: 10px; color: var(--muted); font-size: .92rem; }
+
+nav.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+nav.tabs button { background: none; border: 0; border-bottom: 3px solid transparent; padding: 8px 14px 7px; cursor: pointer;
+  font: 600 1.05rem var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+nav.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+
+.btn { font: 600 1rem var(--body); padding: 9px 16px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.btn:hover:not(:disabled) { border-color: var(--muted); }
+.btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.btn.good { background: var(--good); color: var(--surface); border-color: var(--good); }
+.btn.bad { background: var(--bad); color: var(--surface); border-color: var(--bad); }
+.btn.ghost { background: transparent; }
+.btn.sm { font-size: .88rem; padding: 5px 10px; }
+.btn.warn { color: var(--bad); border-color: var(--bad); }
+.btn:disabled { opacity: .45; cursor: default; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+.modes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 540px) { .modes { grid-template-columns: 1fr; } }
+.mode { text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 6px; cursor: pointer; color: var(--ink); font: inherit; }
+.mode:hover:not(:disabled) { border-color: var(--ink); }
+.mode:disabled { opacity: .5; cursor: default; }
+.mode h3 { font-size: 1.4rem; font-weight: 700; }
+.mode p { color: var(--muted); font-size: .93rem; }
+.pill { align-self: flex-start; font-size: .8rem; font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--none-bg); color: var(--muted); }
+.pill.due { background: var(--accent); color: #15171C; }
+
+.sessbar { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; }
+.prog { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.prog i { display: block; height: 100%; background: var(--accent); transition: width .3s; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 22px;
+  display: flex; flex-direction: column; gap: 14px; }
+.kicker { font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.big { font-family: var(--display); font-size: clamp(2.3rem, 9vw, 3.6rem); font-weight: 700; line-height: 1.02; overflow-wrap: anywhere; }
+.big.en { font-size: clamp(1.8rem, 7vw, 2.6rem); font-weight: 600; }
+.arts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.art { font: 700 1.5rem var(--display); padding: 12px 6px; border-radius: 10px; border: 2px solid var(--g);
+  background: var(--gbg); color: var(--g); cursor: pointer; }
+.art:disabled { cursor: default; opacity: .35; }
+.art.right { opacity: 1; outline: 3px solid var(--g); outline-offset: 2px; }
+.art.picked { opacity: 1; }
+.fb { font-weight: 600; font-size: 1.05rem; }
+.fb.ok { color: var(--good); }
+.fb.no { color: var(--bad); }
+.answer-form { display: flex; flex-direction: column; gap: 10px; }
+.answer-form input[type="text"] { font: 500 1.3rem var(--body); padding: 10px 12px; }
+.keys { display: flex; gap: 6px; flex-wrap: wrap; }
+.keys button { font: 600 1.05rem var(--body); width: 40px; height: 36px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
+.gapline { font-size: 1.35rem; line-height: 2.1; }
+.gapline input { font: 600 1.2rem var(--body); width: 9em; max-width: 100%; padding: 2px 8px; }
+.gapline mark { background: var(--gbg); color: var(--g); padding: 0 4px; border-radius: 4px; font-weight: 600; }
+
+.details { display: flex; flex-direction: column; gap: 10px; }
+.dline { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
+.dword { font-family: var(--display); font-size: 1.9rem; font-weight: 700; line-height: 1.1; }
+.meaning { font-size: 1.15rem; font-weight: 500; }
+.example { font-size: 1.08rem; display: flex; flex-direction: column; gap: 2px; }
+.example small { color: var(--muted); font-size: .92rem; }
+.tip { background: var(--bg); border-radius: 8px; padding: 9px 12px; font-size: .95rem; }
+.tip b { font-family: var(--display); text-transform: uppercase; letter-spacing: .07em; font-size: .85rem; margin-right: 6px; color: var(--muted); }
+.speak { background: none; border: 1px solid var(--line); color: var(--muted); border-radius: 999px; padding: 2px 10px 2px 7px;
+  font: 500 .82rem var(--body); cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+.speak svg { width: 14px; height: 14px; fill: currentColor; }
+
+.empty { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 24px; display: flex; flex-direction: column; gap: 12px; }
+.toolbar { display: flex; flex-direction: column; gap: 10px; }
+.filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.filters button { font: 600 .88rem var(--body); padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); cursor: pointer; }
+.filters button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.wlist { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.witem + .witem { border-top: 1px solid var(--line); }
+.wrow { width: 100%; display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; gap: 12px; align-items: center;
+  padding: 11px 14px; background: none; border: 0; text-align: left; cursor: pointer; color: var(--ink); font: inherit; }
+.wrow:hover { background: var(--bg); }
+.wmain { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wmain strong { font-weight: 600; font-size: 1.08rem; }
+.wdetail { padding: 4px 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.dots { display: flex; gap: 3px; }
+.dots i { width: 8px; height: 8px; border-radius: 2px; background: var(--line); }
+.dots i.on { background: var(--good); }
+.mbar { height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.mbar i { display: block; height: 100%; background: var(--good); }
+.mprog { display: flex; flex-direction: column; gap: 6px; background: var(--bg); border-radius: 8px; padding: 10px 12px; }
+.mrow { display: grid; grid-template-columns: minmax(0, 9em) auto minmax(0, 1fr); gap: 12px; align-items: center; font-size: .93rem; }
+.mrow.off { grid-template-columns: minmax(0, 9em) minmax(0, 1fr); opacity: .6; }
+
+.panel { display: flex; flex-direction: column; gap: 12px; }
+textarea, input[type="text"], input[type="search"], select { font: inherit; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; width: 100%; min-width: 0; }
+textarea { resize: vertical; }
+.editor { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.wdetail .editor { padding: 0; border: 0; }
+.editor .field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.editor .full { grid-column: 1 / -1; }
+.editor label { font-size: .72rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
+.editor .dupe { color: var(--bad); font-size: .88rem; }
+.editor input, .editor select, .editor textarea { background: var(--bg); }
+@media (max-width: 520px) { .editor { grid-template-columns: 1fr; } }
+
+.rules { display: flex; flex-direction: column; gap: 22px; }
+.rules section { display: flex; flex-direction: column; gap: 10px; }
+.rules h3 { font-size: 1.35rem; font-weight: 700; }
+.tablewrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; font-size: .95rem; }
+th, td { text-align: left; padding: 9px 12px; vertical-align: top; }
+th { font-size: .72rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); border-bottom: 1px solid var(--line); }
+tr + tr td { border-top: 1px solid var(--line); }
+.rules ul { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 6px; max-width: 65ch; }
+.sounds { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
+.sound { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; }
+.sound b { font-family: var(--display); font-size: 1.3rem; margin-right: 6px; }
+
+#toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  background: var(--ink); color: var(--bg); padding: 9px 16px; border-radius: 10px; font-weight: 500; max-width: calc(100% - 32px); z-index: 20; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="mark" aria-hidden="true"><i class="g-der"></i><i class="g-die"></i><i class="g-das"></i></div>
+      <div>
+        <h1>Wortkiste</h1>
+        <p>Your German word box: add words, then practise them until they stick.</p>
+      </div>
+    </div>
+    <div class="stats" aria-label="Progress">
+      <div class="stat"><b id="s-total">0</b><span>Words</span></div>
+      <div class="stat"><b id="s-due">0</b><span>Due now</span></div>
+      <div class="stat"><b id="s-master">0</b><span>Mastered</span></div>
+      <div class="stat"><b id="s-streak">0</b><span>Day streak</span></div>
+    </div>
+    <p class="note" id="note" hidden></p>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button type="button" role="tab" data-tab="practice" aria-selected="true">Practice</button>
+    <button type="button" role="tab" data-tab="words" aria-selected="false">My words</button>
+    <button type="button" role="tab" data-tab="add" aria-selected="false">Add words</button>
+    <button type="button" role="tab" data-tab="rules" aria-selected="false">Rules &amp; tips</button>
+  </nav>
+
+  <main>
+    <section id="view-practice" class="panel"><p class="note">Loading your words…</p></section>
+
+    <section id="view-words" class="panel" hidden>
+      <div class="toolbar">
+        <input id="search" type="search" placeholder="Search German or English" aria-label="Search words">
+        <div class="filters" id="filters"></div>
+      </div>
+      <div id="wlist"></div>
+    </section>
+
+    <section id="view-add" class="panel" hidden></section>
+
+    <section id="view-rules" class="rules" hidden>
+      <section>
+        <h3>Guess the article from the word</h3>
+        <p class="muted">These patterns cover a lot of nouns. Learn them once and many articles stop being a guess.</p>
+        <div class="tablewrap"><table>
+          <tr><th>Pattern</th><th>Article</th><th>Examples</th></tr>
+          <tr><td>Ends in -ung, -heit, -keit, -schaft, -ion, -tät</td><td><span class="chip g-die">die</span></td><td>die Zeitung, die Freiheit, die Information</td></tr>
+          <tr><td>Most nouns ending in -e</td><td><span class="chip g-die">die</span></td><td>die Katze, die Lampe (but der Junge, der Name)</td></tr>
+          <tr><td>Small things: -chen, -lein</td><td><span class="chip g-das">das</span></td><td>das Mädchen, das Brötchen</td></tr>
+          <tr><td>Ends in -um, -ment; verbs used as nouns</td><td><span class="chip g-das">das</span></td><td>das Museum, das Dokument, das Essen</td></tr>
+          <tr><td>Days, months, seasons, weather</td><td><span class="chip g-der">der</span></td><td>der Montag, der Mai, der Winter, der Regen</td></tr>
+          <tr><td>Male people and jobs; ends in -ling, -ismus</td><td><span class="chip g-der">der</span></td><td>der Vater, der Lehrer, der Frühling</td></tr>
+          <tr><td>Every plural</td><td><span class="chip g-die">die</span></td><td>die Hunde, die Häuser, die Kinder</td></tr>
+        </table></div>
+      </section>
+      <section>
+        <h3>Habits that help</h3>
+        <ul>
+          <li>Never learn a noun alone. Learn <b>der Hund, die Hunde</b> as one unit: article, word and plural.</li>
+          <li>Picture the colour. Blue for der, red for die, green for das. Imagine a blue dog, a red cat, a green house.</li>
+          <li>Every German noun starts with a capital letter. If it is capitalised mid-sentence, it is a noun.</li>
+          <li>In a normal sentence the verb comes second: <i>Heute <b>gehe</b> ich nach Hause.</i></li>
+          <li>Ten new words a day plus a daily review beats fifty words once a week. Practise when the Due counter is above zero.</li>
+          <li>Say every word out loud. Use the Listen button and copy the sound.</li>
+          <li>No umlaut keys? Type ae, oe, ue and ss. The trainer accepts both.</li>
+        </ul>
+      </section>
+      <section>
+        <h3>Sounds that trip up beginners</h3>
+        <div class="sounds">
+          <div class="sound"><b>ei</b>like "eye": drei</div>
+          <div class="sound"><b>ie</b>like "ee": Bier</div>
+          <div class="sound"><b>w</b>like English v: Wasser</div>
+          <div class="sound"><b>v</b>usually like f: Vater</div>
+          <div class="sound"><b>z</b>like "ts": Zeit</div>
+          <div class="sound"><b>j</b>like y: ja</div>
+          <div class="sound"><b>sch</b>like "sh": Schule</div>
+          <div class="sound"><b>ß</b>a sharp ss: Straße</div>
+          <div class="sound"><b>ä</b>like e in "bed": Käse</div>
+          <div class="sound"><b>ö</b>say "e", round your lips: schön</div>
+          <div class="sound"><b>ü</b>say "ee", round your lips: Tür</div>
+          <div class="sound"><b>eu</b>like "oy": neu</div>
+        </div>
+      </section>
+    </section>
+  </main>
+</div>
+<div id="toast" role="status" hidden></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const TYPES = ["noun", "verb", "adjective", "adverb", "phrase", "other"];
+const BOX_DAYS = [0, 0, 1, 3, 7, 14]; // days until a word in box n is due again
+const DAY = 864e5;
+const MODES = [
+  { id: "cards", name: "Flashcards", desc: "See the German word. Recall its article and meaning, then check." },
+  { id: "article", name: "der / die / das", desc: "Pick the right article for each noun. Keys 1, 2, 3 work too." },
+  { id: "type", name: "Type it", desc: "See the English meaning and type the German, with the article." },
+  { id: "gap", name: "Fill the gap", desc: "Complete an easy sentence with the missing word." },
+];
+const STARTERS = [
+  ["Hund", "der", "Hunde", "noun", "dog", "Der Hund ist groß.", "The dog is big.", "Hund", "Picture a big blue dog: der Hund."],
+  ["Katze", "die", "Katzen", "noun", "cat", "Die Katze schläft.", "The cat is sleeping.", "Katze", "Most nouns ending in -e are die."],
+  ["Haus", "das", "Häuser", "noun", "house", "Das Haus ist alt.", "The house is old.", "Haus", "The plural gets an umlaut: Haus, Häuser."],
+  ["Tisch", "der", "Tische", "noun", "table", "Der Tisch ist neu.", "The table is new.", "Tisch", "Sounds like English 'dish', and a dish goes on der Tisch."],
+  ["Tür", "die", "Türen", "noun", "door", "Die Tür ist offen.", "The door is open.", "Tür", "For ü, say 'ee' with rounded lips."],
+  ["Buch", "das", "Bücher", "noun", "book", "Ich lese das Buch.", "I am reading the book.", "Buch", "Like Haus, the plural gets an umlaut: Bücher."],
+  ["Wasser", "das", "-", "noun", "water", "Ich trinke Wasser.", "I drink water.", "Wasser", "W sounds like English v: 'vasser'."],
+  ["Frau", "die", "Frauen", "noun", "woman; Mrs.", "Die Frau heißt Anna.", "The woman is called Anna.", "Frau", "Frau also means Mrs.: Frau Müller."],
+  ["Mann", "der", "Männer", "noun", "man", "Der Mann ist nett.", "The man is nice.", "Mann", "Male people are der: der Mann, der Vater."],
+  ["Kind", "das", "Kinder", "noun", "child", "Das Kind spielt.", "The child is playing.", "Kind", "Kindergarten means children's garden."],
+  ["gehen", null, null, "verb", "to go (on foot)", "Ich gehe nach Hause.", "I am going home.", "gehe", "ich gehe, du gehst, er geht. Use fahren for car or train."],
+  ["schön", null, null, "adjective", "beautiful; nice", "Das Wetter ist schön.", "The weather is nice.", "schön", "Danke schön! means thank you very much."],
+];
+
+let words = [], meta = { streak: 0, lastDay: "" }, store = null, loaded = false;
+let tab = "practice", session = null, openId = null, editId = null, filter = "all", query = "";
+let drafts = [], addText = "", addStatus = "", busy = false, ctl = null, sampleOff = false;
+const sampleP = window.claude ? window.claude.use("sample").catch(() => null) : Promise.resolve(null);
+
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === "class") el.className = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else if (k === "value") el.value = v;
+    else el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of kids.flat()) if (c != null && c !== false) el.append(c.nodeType ? c : String(c));
+  return el;
+}
+const gclass = w => "g-" + (w.article || "none");
+const label = w => (w.article ? w.article + " " : "") + w.word;
+const MODE_IDS = ["cards", "article", "type", "gap"];
+// Each practice mode keeps its own box per word: knowing a flashcard doesn't mean you can type it.
+function prog(w, m) {
+  const p = w.progress && w.progress[m];
+  if (p) return p;
+  if (m === "cards" && w.box) return { box: w.box, due: w.due || 0, seen: w.seen || 0, right: w.right || 0 }; // progress saved before modes were split
+  return { box: 1, due: 0, seen: 0, right: 0 };
+}
+const appliesTo = (w, m) => m === "article" ? !!w.article : m === "gap" ? !!gapParts(w) : true;
+const isDueIn = (w, m) => (prog(w, m).due || 0) <= Date.now();
+const weakest = w => Math.min(...MODE_IDS.filter(m => appliesTo(w, m)).map(m => prog(w, m).box || 1));
+const dueCount = () => words.reduce((n, w) => n + MODE_IDS.filter(m => appliesTo(w, m) && unlocked(w, m) && isDueIn(w, m)).length, 0);
+const newId = () => "w" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const shuffle = a => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const norm = s => String(s || "").toLowerCase().normalize("NFC").replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue")
+  .replace(/ß/g, "ss").replace(/[.,!?;:"']/g, "").replace(/\s+/g, " ").trim();
+const dayKey = (d = new Date()) => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+function gapParts(w) {
+  const s = w.example_de || "", g = (w.gap || "").trim();
+  if (!g) return null;
+  const i = s.toLowerCase().indexOf(g.toLowerCase());
+  return i < 0 ? null : [s.slice(0, i), s.slice(i, i + g.length), s.slice(i + g.length)];
+}
+// Recall modes open for a word once it reaches box 2 in Flashcards, and stay open after the first try.
+const LOCKED_UNTIL_CARDS = ["type", "gap"];
+const unlocked = (w, m) => !LOCKED_UNTIL_CARDS.includes(m) || prog(w, "cards").box >= 2 || prog(w, m).seen > 0;
+const applicable = mode => words.filter(w => appliesTo(w, mode));
+function eligible(mode) { return applicable(mode).filter(w => unlocked(w, mode)); }
+let toastT;
+function toast(m) { const t = $("#toast"); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3500); }
+function note(m) { const n = $("#note"); n.textContent = m || ""; n.hidden = !m; }
+function ready() { if (!store) toast("Still connecting. Try again in a moment."); return !!store; }
+
+// ---------- speech ----------
+const canSpeak = "speechSynthesis" in window;
+function speak(t) {
+  try {
+    const u = new SpeechSynthesisUtterance(t);
+    u.lang = "de-DE"; u.rate = 0.9;
+    const v = speechSynthesis.getVoices().find(v => (v.lang || "").toLowerCase().startsWith("de"));
+    if (v) u.voice = v;
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  } catch {}
+}
+function speakBtn(t) {
+  if (!canSpeak || !t) return null;
+  const b = h("button", { class: "speak", type: "button", "aria-label": "Listen: " + t, onclick: e => { e.stopPropagation(); speak(t); } }, "Listen");
+  b.insertAdjacentHTML("afterbegin", '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4zm12.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4z"/></svg>');
+  return b;
+}
+
+// ---------- storage ----------
+async function init() {
+  let saved = null; try { saved = localStorage.getItem("wk.tab"); } catch {}
+  setTab(["practice", "words", "add", "rules"].includes(saved) ? saved : "practice");
+  let db = null, user = null, uid = null;
+  if (window.claude) {
+    try { [db, user] = await Promise.all([window.claude.use("db"), window.claude.use("user")]); uid = user ? await user.id() : null; } catch {}
+  }
+  if (db && uid) cloudStore(db, uid); else localStore();
+}
+function cloudStore(db, uid) {
+  const deck = db.doc("data/users/" + uid + "/deck");
+  const col = deck.collection("words");
+  const body = w => { const { id, draft, ...rest } = w; return rest; };
+  store = {
+    put: w => col.doc(w.id).set(body(w)),
+    patch: (id, f) => col.doc(id).update(f),
+    remove: id => col.doc(id).delete(),
+    setMeta: m => deck.set(m),
+  };
+  const timer = setTimeout(() => { if (!loaded) note("Your words can't be reached yet. Check your connection; they will appear once it's back."); }, 10000);
+  col.onSnapshot(snap => {
+    words = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (!snap.metadata.fromCache && !loaded) { loaded = true; clearTimeout(timer); note(""); }
+    onData();
+  }, e => { clearTimeout(timer); loaded = true; note("Couldn't load your words (" + e.code + "). Reload the page to try again."); onData(); });
+  deck.onSnapshot(s => { if (s.exists) meta = { ...meta, ...s.data() }; renderStats(); }, () => {});
+}
+function localStore() {
+  let data = {};
+  try { data = JSON.parse(localStorage.getItem("wk.data") || "{}") || {}; } catch {}
+  words = Array.isArray(data.words) ? data.words : [];
+  meta = { ...meta, ...(data.meta || {}) };
+  const save = () => { try { localStorage.setItem("wk.data", JSON.stringify({ words, meta })); } catch {} };
+  store = {
+    put: async w => { const { draft, ...c } = w; const i = words.findIndex(x => x.id === c.id); if (i >= 0) words[i] = c; else words.push(c); save(); onData(); },
+    patch: async (id, f) => { words = words.map(x => x.id === id ? { ...x, ...f, progress: { ...(x.progress || {}), ...(f.progress || {}) } } : x); save(); onData(); },
+    remove: async id => { words = words.filter(x => x.id !== id); save(); onData(); },
+    setMeta: async m => { meta = m; save(); },
+  };
+  loaded = true;
+  note("Words are saved in this browser only. Open this page on claude.ai while signed in to keep them on every device.");
+  onData();
+}
+function onData() {
+  renderStats();
+  if (tab === "words" && !editId) renderWordList();
+  if (tab === "practice" && !session) renderPractice();
+}
+async function addStarters(btn) {
+  if (!ready()) return;
+  if (btn) btn.disabled = true;
+  try {
+    for (const s of STARTERS) {
+      const [word, article, plural, type, english, example_de, example_en, gap, tip] = s;
+      if (words.some(w => w.word === word)) continue;
+      await store.put({ id: newId(), word, article, plural, type, english, example_de, example_en, gap, tip, progress: {}, added: Date.now() });
+    }
+    toast("Added 12 starter words. Delete any you don't want in My words.");
+  } catch { toast("Couldn't save the starter words. Try again."); if (btn) btn.disabled = false; }
+}
+
+// ---------- stats & tabs ----------
+function renderStats() {
+  $("#s-total").textContent = words.length;
+  $("#s-due").textContent = dueCount();
+  $("#s-master").textContent = words.filter(w => weakest(w) >= 5).length;
+  const y = dayKey(new Date(Date.now() - DAY));
+  $("#s-streak").textContent = (meta.lastDay === dayKey() || meta.lastDay === y) ? (meta.streak || 0) : 0;
+}
+let streakBusy = false;
+async function bumpStreak() {
+  const t = dayKey();
+  if (meta.lastDay === t || streakBusy) return;
+  const y = dayKey(new Date(Date.now() - DAY));
+  meta = { streak: meta.lastDay === y ? (meta.streak || 0) + 1 : 1, lastDay: t };
+  renderStats();
+  streakBusy = true;
+  try { await store.setMeta(meta); } catch {}
+  streakBusy = false;
+}
+function setTab(t) {
+  tab = t;
+  try { localStorage.setItem("wk.tab", t); } catch {}
+  document.querySelectorAll("nav.tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === t)));
+  for (const v of ["practice", "words", "add", "rules"]) $("#view-" + v).hidden = v !== t;
+  if (t === "practice") renderPractice();
+  if (t === "words") renderWords();
+  if (t === "add") renderAdd();
+}
+document.querySelectorAll("nav.tabs button").forEach(b => b.addEventListener("click", () => setTab(b.dataset.tab)));
+
+// ---------- shared word details ----------
+function details(w) {
+  const plural = w.plural && w.plural !== "-" ? "plural: die " + w.plural : (w.plural === "-" ? "no plural" : null);
+  return h("div", { class: "details " + gclass(w) },
+    h("div", { class: "dline" }, h("span", { class: "chip" }, w.article || w.type || "word"),
+      h("strong", { class: "gword dword" }, label(w)), plural ? h("span", { class: "muted" }, plural) : null, speakBtn(label(w))),
+    h("div", { class: "meaning" }, w.english || ""),
+    w.example_de ? h("div", { class: "example" }, h("span", {}, w.example_de, " ", speakBtn(w.example_de)), h("small", {}, w.example_en || "")) : null,
+    w.tip ? h("p", { class: "tip" }, h("b", {}, "Tip"), w.tip) : null);
+}
+
+// ---------- practice ----------
+function emptyState() {
+  return h("div", { class: "empty" },
+    h("h2", {}, "Your word box is empty"),
+    h("p", { class: "muted" }, "Add German words as you meet them. Claude writes a card for each one: the article, the plural, an easy example sentence and a tip."),
+    h("div", { class: "row" },
+      h("button", { class: "btn primary", type: "button", onclick: () => setTab("add") }, "Add my words"),
+      h("button", { class: "btn", type: "button", onclick: e => addStarters(e.currentTarget) }, "Add 12 starter words")));
+}
+function renderPractice() {
+  if (session) return renderSession();
+  const el = $("#view-practice");
+  el.replaceChildren();
+  if (!loaded && !words.length) { el.append(h("p", { class: "note" }, "Loading your words…")); return; }
+  if (!words.length) { el.append(emptyState()); return; }
+  const grid = h("div", { class: "modes" });
+  for (const m of MODES) {
+    const all = applicable(m.id), pool = eligible(m.id), due = pool.filter(w => isDueIn(w, m.id)).length;
+    const mastered = all.filter(w => prog(w, m.id).box >= 5).length, locked = all.length - pool.length;
+    const pill = !all.length ? (m.id === "article" ? "Add some nouns first" : "No example sentences yet")
+      : !pool.length ? "Locked: get words to box 2 in Flashcards"
+      : due ? due + " due now" : "none due";
+    grid.append(h("button", { class: "mode", type: "button", disabled: !pool.length, onclick: () => startSession(m.id) },
+      h("h3", {}, m.name), h("p", {}, m.desc),
+      all.length ? h("div", { class: "mbar", "aria-label": mastered + " of " + all.length + " mastered" }, h("i", { style: "width:" + (mastered / all.length * 100) + "%" })) : null,
+      h("div", { class: "row" }, h("span", { class: "pill" + (due ? " due" : "") }, pill),
+        all.length ? h("span", { class: "muted small" }, mastered + " / " + all.length + " mastered" + (locked && pool.length ? " · " + locked + " locked" : "")) : null)));
+  }
+  el.append(grid, h("p", { class: "muted small" },
+    "Each mode tracks its own progress. A right answer moves the word up one box (1 → 5) in that mode only, so you see it less often there. A wrong answer sends it back to box 1 in that mode. A word counts as mastered when it reaches box 5 in every mode that applies to it. Type it and Fill the gap open for a word once it reaches box 2 in Flashcards, so you only write words you already recognise."));
+}
+function startSession(mode) {
+  const pool = eligible(mode), due = pool.filter(w => isDueIn(w, mode));
+  const q = shuffle(due.length ? due : pool).slice(0, 15);
+  session = { mode, items: q.map(w => ({ ...w })), i: 0, right: 0, state: "ask" };
+  renderSession();
+}
+function endSession() { session = null; renderPractice(); }
+function next() { session.i++; session.state = "ask"; session.revealed = false; session.fb = null; session.picked = null; renderSession(); }
+function answer(w, ok) {
+  if (session.state !== "ask") return;
+  session.state = "done";
+  if (ok) session.right++;
+  grade(w, ok, session.mode);
+}
+async function grade(w, ok, mode) {
+  const p = prog(words.find(x => x.id === w.id) || w, mode);
+  const box = ok ? Math.min(5, (p.box || 1) + 1) : 1;
+  const f = { box, due: Date.now() + BOX_DAYS[box] * DAY, seen: (p.seen || 0) + 1, right: (p.right || 0) + (ok ? 1 : 0) };
+  try { await store.patch(w.id, { progress: { [mode]: f } }); } catch { toast("Couldn't save your progress. Check your connection."); }
+  bumpStreak();
+}
+function renderSession() {
+  const el = $("#view-practice"), s = session, total = s.items.length;
+  el.replaceChildren(h("div", { class: "sessbar" },
+    h("span", { class: "muted small" }, MODES.find(m => m.id === s.mode).name + " · " + Math.min(s.i + 1, total) + " / " + total),
+    h("div", { class: "prog" }, h("i", { style: "width:" + (s.i / total * 100) + "%" })),
+    h("button", { class: "btn ghost sm", type: "button", onclick: endSession }, s.i >= total ? "Close" : "End")));
+  if (s.i >= total) { el.append(summary()); return; }
+  const w = s.items[s.i];
+  el.append({ cards: cardFlash, article: cardArticle, type: cardType, gap: cardGap }[s.mode](w));
+  const f = el.querySelector("[data-focus]");
+  if (f) f.focus({ preventScroll: true });
+}
+function nextBtn() { return h("button", { class: "btn primary", type: "button", "data-focus": true, onclick: next }, session.i + 1 >= session.items.length ? "See results" : "Next"); }
+function cardFlash(w) {
+  const c = h("div", { class: "card" }, h("span", { class: "kicker" }, w.type || "word"),
+    h("div", { class: "row" }, h("div", { class: "big" }, w.word), speakBtn(w.word)));
+  if (!session.revealed) {
+    c.append(h("p", { class: "muted" }, w.article ? "Which article? What does it mean?" : "What does it mean?"),
+      h("div", { class: "row" }, h("button", { class: "btn primary", type: "button", "data-focus": true, onclick: () => { session.revealed = true; renderSession(); } }, "Show answer")));
+  } else {
+    c.append(details(w), h("div", { class: "row" },
+      h("button", { class: "btn bad", type: "button", onclick: () => { answer(w, false); next(); } }, "Again"),
+      h("button", { class: "btn good", type: "button", "data-focus": true, onclick: () => { answer(w, true); next(); } }, "Knew it")));
+  }
+  return c;
+}
+function cardArticle(w) {
+  const done = session.state === "done";
+  const pick = a => { session.picked = a; answer(w, a === w.article); renderSession(); };
+  const c = h("div", { class: "card" }, h("span", { class: "kicker" }, "Which article?"),
+    h("div", { class: "row" }, h("div", { class: "big" }, w.word), speakBtn(w.word)),
+    h("p", { class: "muted" }, w.english || ""),
+    h("div", { class: "arts" }, ["der", "die", "das"].map((a, i) =>
+      h("button", { class: "art g-" + a + (done && a === w.article ? " right" : "") + (done && a === session.picked ? " picked" : ""),
+        type: "button", disabled: done, "aria-label": a + " (key " + (i + 1) + ")", onclick: () => pick(a) }, a))));
+  if (done) {
+    const ok = session.picked === w.article;
+    c.append(h("p", { class: "fb " + (ok ? "ok" : "no") }, ok ? "Richtig! It's " + label(w) + "." : "Not quite. It's " + label(w) + "."),
+      details(w), h("div", { class: "row" }, nextBtn()));
+  }
+  return c;
+}
+function checkType(w, given) {
+  const g = norm(given), exp = label(w);
+  if (g === norm(exp)) return { ok: true, msg: "Richtig!" };
+  if (w.article) {
+    if (g === norm(w.word)) return { ok: false, msg: "Right word, but add the article: " + exp + "." };
+    const m = g.match(/^(der|die|das) (.+)$/);
+    if (m && m[2] === norm(w.word)) return { ok: false, msg: "Right word, wrong article. It's " + exp + "." };
+  }
+  return { ok: false, msg: "Not quite. The answer is " + exp + "." };
+}
+function umlautKeys(input) {
+  return h("div", { class: "keys", "aria-label": "Special letters" }, ["ä", "ö", "ü", "ß"].map(k =>
+    h("button", { type: "button", onclick: () => {
+      const a = input.selectionStart ?? input.value.length, b = input.selectionEnd ?? a;
+      input.value = input.value.slice(0, a) + k + input.value.slice(b);
+      input.focus(); input.setSelectionRange(a + 1, a + 1);
+    } }, k)));
+}
+function answerInput(id, cls) {
+  return h("input", { id, class: cls, type: "text", autocomplete: "off", autocapitalize: "off", spellcheck: "false", lang: "de", "aria-label": "Your answer", "data-focus": true });
+}
+function cardType(w) {
+  const c = h("div", { class: "card" }, h("span", { class: "kicker" }, (w.type || "word") + (w.article ? " · write it with der, die or das" : "")),
+    h("div", { class: "big en" }, w.english || ""));
+  if (session.state === "ask") {
+    const input = answerInput("type-input");
+    const form = h("form", { class: "answer-form", onsubmit: e => {
+      e.preventDefault();
+      if (!input.value.trim()) return;
+      session.fb = { ...checkType(w, input.value), given: input.value };
+      answer(w, session.fb.ok); renderSession();
+    } }, input, umlautKeys(input), h("div", { class: "row" },
+      h("button", { class: "btn primary", type: "submit" }, "Check"),
+      h("button", { class: "btn ghost", type: "button", onclick: () => { session.fb = { ok: false, msg: "The answer is " + label(w) + ".", given: "" }; answer(w, false); renderSession(); } }, "I don't know")));
+    c.append(form);
+  } else {
+    c.append(h("p", { class: "fb " + (session.fb.ok ? "ok" : "no") }, session.fb.msg),
+      session.fb.given && !session.fb.ok ? h("p", { class: "muted" }, "You wrote: " + session.fb.given) : null,
+      details(w), h("div", { class: "row" }, nextBtn()));
+  }
+  return c;
+}
+function cardGap(w) {
+  const [before, gap, after] = gapParts(w);
+  const c = h("div", { class: "card" }, h("span", { class: "kicker" }, "Fill the gap · " + (w.english || "")));
+  if (session.state === "ask") {
+    const input = answerInput("gap-input");
+    const form = h("form", { class: "answer-form", onsubmit: e => {
+      e.preventDefault();
+      if (!input.value.trim()) return;
+      const ok = norm(input.value) === norm(gap);
+      session.fb = { ok, given: input.value, msg: ok ? "Richtig!" : "Not quite. The missing word is " + gap + "." };
+      answer(w, ok); renderSession();
+    } }, h("p", { class: "gapline", lang: "de" }, before, input, after), h("p", { class: "muted" }, w.example_en || ""),
+      umlautKeys(input), h("div", { class: "row" },
+        h("button", { class: "btn primary", type: "submit" }, "Check"),
+        h("button", { class: "btn ghost", type: "button", onclick: () => { session.fb = { ok: false, given: "", msg: "The missing word is " + gap + "." }; answer(w, false); renderSession(); } }, "I don't know")));
+    c.append(form);
+  } else {
+    c.append(h("p", { class: "fb " + (session.fb.ok ? "ok" : "no") }, session.fb.msg),
+      h("p", { class: "gapline " + gclass(w), lang: "de" }, before, h("mark", {}, gap), after),
+      session.fb.given && !session.fb.ok ? h("p", { class: "muted" }, "You wrote: " + session.fb.given) : null,
+      details(w), h("div", { class: "row" }, nextBtn()));
+  }
+  return c;
+}
+function summary() {
+  const { right, items, mode } = session, total = items.length, pct = right / total;
+  const msg = pct === 1 ? "Perfekt! Every answer right." : pct >= 0.7 ? "Sehr gut! The misses come back next session." : "Gut gemacht for practising. The words you missed are back in box 1 and will come up again soon.";
+  return h("div", { class: "card" }, h("span", { class: "kicker" }, "Session done"),
+    h("div", { class: "big" }, right + " / " + total), h("p", {}, msg),
+    h("div", { class: "row" },
+      h("button", { class: "btn primary", type: "button", "data-focus": true, onclick: () => startSession(mode) }, "Practise again"),
+      h("button", { class: "btn", type: "button", onclick: endSession }, "Choose another mode")));
+}
+document.addEventListener("keydown", e => {
+  if (!session || session.mode !== "article" || session.state !== "ask" || tab !== "practice") return;
+  if (e.target.matches("input, textarea, select")) return;
+  const a = { "1": "der", "2": "die", "3": "das" }[e.key];
+  if (a) { e.preventDefault(); const w = session.items[session.i]; session.picked = a; answer(w, a === w.article); renderSession(); }
+});
+
+// ---------- my words ----------
+function renderWords() {
+  const s = $("#search");
+  s.value = query;
+  s.oninput = () => { query = s.value; renderWordList(); };
+  renderWordList();
+}
+function renderWordList() {
+  const groups = [["all", "All"], ["der", "der"], ["die", "die"], ["das", "das"], ["other", "Not nouns"]];
+  const count = k => k === "all" ? words.length : k === "other" ? words.filter(w => !w.article).length : words.filter(w => w.article === k).length;
+  $("#filters").replaceChildren(...groups.map(([k, l]) => h("button", { type: "button", "aria-pressed": String(filter === k),
+    class: k !== "all" && k !== "other" ? "g-" + k : null, onclick: () => { filter = k; renderWordList(); } }, l + " · " + count(k))));
+  const q = norm(query);
+  const list = words.filter(w => filter === "all" || (filter === "other" ? !w.article : w.article === filter))
+    .filter(w => !q || norm(label(w)).includes(q) || norm(w.english).includes(q))
+    .sort((a, b) => a.word.localeCompare(b.word, "de"));
+  const el = $("#wlist");
+  if (!words.length) { el.replaceChildren(loaded ? emptyState() : h("p", { class: "note" }, "Loading your words…")); return; }
+  if (!list.length) { el.replaceChildren(h("p", { class: "note" }, "No words match.")); return; }
+  el.replaceChildren(h("div", { class: "wlist" }, list.map(wordItem)));
+}
+function dots(box, pre = "Box ") { return h("span", { class: "dots", title: pre + box + " of 5", "aria-label": pre + box + " of 5" }, [1, 2, 3, 4, 5].map(i => h("i", { class: i <= box ? "on" : null }))); }
+function progressTable(w) {
+  return h("div", { class: "mprog" }, MODES.map(m => {
+    if (!appliesTo(w, m.id)) return h("div", { class: "mrow off" }, h("span", {}, m.name), h("span", { class: "muted small" }, m.id === "article" ? "nouns only" : "needs a sentence"));
+    if (!unlocked(w, m.id)) return h("div", { class: "mrow off" }, h("span", {}, m.name), h("span", { class: "muted small" }, "locked until box 2 in Flashcards"));
+    const p = prog(w, m.id);
+    return h("div", { class: "mrow" }, h("span", {}, m.name), dots(p.box || 1),
+      h("span", { class: "muted small" }, p.seen ? (p.right || 0) + " / " + p.seen + " right" + (isDueIn(w, m.id) ? " · due" : "") : "not practised"));
+  }));
+}
+function wordItem(w) {
+  const open = openId === w.id;
+  const item = h("div", { class: "witem " + gclass(w) },
+    h("button", { class: "wrow", type: "button", "aria-expanded": String(open), onclick: () => { openId = open ? null : w.id; editId = null; renderWordList(); } },
+      h("span", { class: "chip" }, w.article || (w.type === "adjective" ? "adj." : w.type || "word")),
+      h("span", { class: "wmain" }, h("strong", { class: "gword" }, w.word), h("span", { class: "muted" }, "  " + (w.english || ""))),
+      dots(weakest(w), "Weakest mode: box ")));
+  if (!open) return item;
+  if (editId === w.id) {
+    item.append(h("div", { class: "wdetail" }, editor(w, {
+      saveLabel: "Save changes",
+      onSave: async c => { if (!ready()) return; try { editId = null; await store.put({ ...w, ...c }); toast("Saved."); renderWordList(); } catch { toast("Couldn't save. Try again."); } },
+      onCancel: () => { editId = null; renderWordList(); },
+    })));
+  } else {
+    let armed = false;
+    const del = h("button", { class: "btn sm warn", type: "button", onclick: async () => {
+      if (!armed) { armed = true; del.textContent = "Tap again to delete"; return; }
+      if (!ready()) return;
+      try { openId = null; await store.remove(w.id); toast("Deleted " + label(w) + "."); } catch { toast("Couldn't delete. Try again."); }
+    }, onblur: () => { armed = false; del.textContent = "Delete"; } }, "Delete");
+    item.append(h("div", { class: "wdetail" }, details(w),
+      progressTable(w),
+      h("div", { class: "row" }, h("button", { class: "btn sm", type: "button", onclick: () => { editId = w.id; renderWordList(); } }, "Edit"), del)));
+  }
+  return item;
+}
+
+// ---------- editor (shared by Add and My words) ----------
+function editor(w, { onSave, onCancel, saveLabel, cancelLabel }) {
+  const id = k => "ed-" + w.id + "-" + k;
+  const inp = (k, lab, full) => h("div", { class: "field" + (full ? " full" : "") }, h("label", { for: id(k) }, lab),
+    h("input", { id: id(k), type: "text", value: w[k] || "", lang: ["english", "example_en"].includes(k) ? "en" : "de" }));
+  const sel = (k, lab, opts) => h("div", { class: "field" }, h("label", { for: id(k) }, lab),
+    h("select", { id: id(k) }, opts.map(([v, t]) => { const o = h("option", { value: v }, t); if ((w[k] || "") === v) o.selected = true; return o; })));
+  const dupe = w.draft && words.some(x => x.word.toLowerCase() === (w.word || "").toLowerCase());
+  const read = () => {
+    const v = k => form.querySelector("#" + CSS.escape(id(k))).value.trim();
+    const c = { word: v("word"), article: v("article") || null, plural: v("plural") || null, type: v("type"), english: v("english"),
+      example_de: v("example_de"), example_en: v("example_en"), gap: v("gap"), tip: v("tip") };
+    if (c.article) c.type = "noun";
+    return c;
+  };
+  const form = h("form", { class: "editor", oninput: () => { if (w.draft) Object.assign(w, read()); }, onsubmit: e => {
+    e.preventDefault();
+    const c = read();
+    if (!c.word || !c.english) { toast("A card needs at least the German word and its meaning."); return; }
+    onSave(c);
+  } },
+    dupe ? h("p", { class: "dupe full" }, "This word is already in your box.") : null,
+    sel("article", "Article", [["", "none (not a noun)"], ["der", "der"], ["die", "die"], ["das", "das"]]),
+    inp("word", "German word"),
+    inp("plural", "Plural (nouns)"),
+    sel("type", "Word type", TYPES.map(t => [t, t])),
+    inp("english", "Meaning in English", true),
+    inp("example_de", "Example sentence", true),
+    inp("example_en", "Sentence in English", true),
+    inp("gap", "Word as written in the sentence"),
+    inp("tip", "Tip", true),
+    h("div", { class: "row full" }, h("button", { class: "btn primary", type: "submit" }, saveLabel || "Save"),
+      h("button", { class: "btn ghost", type: "button", onclick: onCancel }, cancelLabel || "Cancel")));
+  return form;
+}
+
+// ---------- add words ----------
+function buildPrompt(entries) {
+  return `You write flashcards for a complete beginner (level A1) learning German. The learner reads English.
+For each entry below make one card. An entry may be German or English; if it is English, use the most common German word for it. Fix spelling mistakes in German entries.
+Reply with only a JSON array, one object per entry, in the same order, with exactly these keys:
+- "word": the dictionary form without an article. Capitalize nouns.
+- "article": "der", "die" or "das" for nouns; null for everything else.
+- "plural": for nouns, the plural without the article (e.g. "Hunde"); "-" if the noun has no plural; null for non-nouns.
+- "type": one of "noun", "verb", "adjective", "adverb", "phrase", "other".
+- "english": a short English meaning, 1-4 words (verbs start with "to").
+- "example_de": one very easy present-tense sentence of 3-7 words that uses the word. Use only common beginner words.
+- "example_en": the English translation of that sentence.
+- "gap": the word exactly as it is spelled inside example_de (for verbs the conjugated form, for nouns only the noun without the article).
+- "tip": one short practical tip, at most 20 words: a gender rule if one applies (e.g. nouns ending in -ung are die), a memory hook, an irregular plural, or for verbs the ich/du/er forms if irregular.
+Example: [{"word":"Hund","article":"der","plural":"Hunde","type":"noun","english":"dog","example_de":"Der Hund ist groß.","example_en":"The dog is big.","gap":"Hund","tip":"Picture a big blue dog: der Hund."}]
+
+Entries:
+${entries.map((e, i) => (i + 1) + ". " + e).join("\n")}`;
+}
+function cleanCard(o) {
+  if (!o || typeof o !== "object" || !o.word) return null;
+  const str = (v, n) => v == null ? "" : String(v).trim().slice(0, n);
+  const article = ["der", "die", "das"].includes(String(o.article || "").toLowerCase()) ? String(o.article).toLowerCase() : null;
+  const type = TYPES.includes(o.type) ? o.type : (article ? "noun" : "other");
+  return { word: str(o.word, 60), article, plural: article ? (str(o.plural, 60) || null) : null, type, english: str(o.english, 80),
+    example_de: str(o.example_de, 160), example_en: str(o.example_en, 160), gap: str(o.gap, 60), tip: str(o.tip, 200) };
+}
+const ERR = {
+  rate_limited: "Too many requests right now. Wait a minute, then try again.",
+  session_expired: "Your claude.ai sign-in expired. Sign in again, then try again.",
+  refused: "Claude couldn't make cards from that text. Try different words.",
+  invalid_json: "The answer came back garbled. Try again.",
+  empty_completion: "No cards came back. Try fewer words at once.",
+  prompt_too_large: "That's too much text. Try fewer words at once.",
+};
+async function makeCards() {
+  const entries = addText.split(/[\n,;]/).map(s => s.trim()).filter(Boolean).slice(0, 20);
+  if (!entries.length) { addStatus = "Type at least one word first."; renderAdd(); return; }
+  const sample = await sampleP;
+  if (!sample) { sampleOff = true; renderAdd(); return; }
+  ctl = new AbortController(); busy = true;
+  addStatus = "Claude is writing " + entries.length + " card" + (entries.length > 1 ? "s" : "") + ". This can take up to a minute.";
+  renderAdd();
+  try {
+    const res = await sample.json(buildPrompt(entries), { signal: ctl.signal });
+    const arr = Array.isArray(res) ? res : (res && Array.isArray(res.cards) ? res.cards : []);
+    const clean = arr.map(cleanCard).filter(Boolean);
+    if (!clean.length) addStatus = "No cards came back. Try again.";
+    else {
+      drafts.push(...clean.map(c => ({ ...c, id: newId(), draft: true })));
+      addText = "";
+      addStatus = clean.length + " new card" + (clean.length > 1 ? "s" : "") + " below. Check them, fix anything that looks wrong, then save.";
+    }
+  } catch (e) {
+    if (["not_granted", "sampling_disabled", "not_declared", "capability_disabled", "capability_removed"].includes(e.code)) sampleOff = true;
+    addStatus = e.code === "cancelled" ? "Stopped." : (ERR[e.code] || (sampleOff ? "" : "Something went wrong. Try again."));
+  } finally { busy = false; ctl = null; renderAdd(); }
+}
+async function saveDraft(d, c) {
+  if (!ready()) return false;
+  try {
+    await store.put({ ...c, id: d.id, progress: {}, added: Date.now() });
+    drafts = drafts.filter(x => x.id !== d.id);
+    return true;
+  } catch { toast("Couldn't save " + c.word + ". Try again."); return false; }
+}
+function renderAdd() {
+  const el = $("#view-add");
+  const ta = h("textarea", { id: "add-input", rows: "5", lang: "de", placeholder: "Hund\ngehen\nschön\napple", "aria-label": "Words to add", disabled: busy });
+  ta.value = addText;
+  ta.addEventListener("input", () => { addText = ta.value; });
+  ta.addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); makeCards(); } });
+  const manual = h("button", { class: "btn", type: "button", onclick: () => {
+    drafts.unshift({ id: newId(), draft: true, word: "", article: null, type: "noun", english: "" }); renderAdd();
+  } }, "Write a card myself");
+  el.replaceChildren(
+    h("div", { class: "panel" },
+      h("h2", {}, "Add words"),
+      sampleOff
+        ? h("p", { class: "note" }, "Claude can't write cards on this page right now (it may not be allowed for your account). You can still write cards yourself.")
+        : h("p", { class: "muted" }, "Type German words, one per line (up to 20). English works too: Claude finds the German word. Each card gets the article, plural, an easy sentence and a tip."),
+      sampleOff ? null : ta,
+      h("div", { class: "row" },
+        sampleOff ? null : h("button", { class: "btn primary", type: "button", disabled: busy, onclick: makeCards }, busy ? "Writing cards…" : "Make cards"),
+        busy ? h("button", { class: "btn", type: "button", onclick: () => ctl && ctl.abort() }, "Stop") : null,
+        manual),
+      addStatus ? h("p", { class: "small", role: "status" }, addStatus) : null));
+  if (drafts.length) {
+    el.append(h("div", { class: "row", style: "justify-content:space-between" },
+      h("h2", {}, "New cards · " + drafts.length),
+      drafts.length > 1 ? h("button", { class: "btn good", type: "button", onclick: async e => {
+        e.currentTarget.disabled = true;
+        let n = 0;
+        for (const d of [...drafts]) {
+          const { id, draft, ...c } = d;
+          if (!c.word || !c.english) continue;
+          if (await saveDraft(d, c)) n++;
+        }
+        toast("Saved " + n + " card" + (n === 1 ? "" : "s") + ".");
+        renderAdd();
+      } }, "Save all") : null));
+    for (const d of drafts) {
+      el.append(h("div", { "data-draft": d.id }, editor(d, {
+        saveLabel: "Save card", cancelLabel: "Discard",
+        onSave: async c => { if (await saveDraft(d, c)) { toast("Saved " + label(c) + "."); renderAdd(); } },
+        onCancel: () => { drafts = drafts.filter(x => x.id !== d.id); renderAdd(); },
+      })));
+    }
+  }
+}
+
+init();
+</script>
