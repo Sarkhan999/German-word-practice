@@ -13,9 +13,14 @@ Live page: https://claude.ai/artifact/D95TwHpzp17kaTQmCey2po
 
 Each mode keeps its own progress, using boxes 1 to 5. Type it and Fill the gap open for a word once it reaches box 2 in Flashcards.
 
+## Lessons
+
+The Lessons tab holds ready-made A1 lessons by topic, about 20 words each: greetings, about me, family, numbers, time, food, home, daily routine, useful verbs, adjectives and colours, question words, and getting around town. Starting a lesson adds only the words you don't have yet. Once most words in your started lessons reach box 2 in Flashcards, the next lesson is marked "Up next". The Practice tab can be limited to one lesson.
+
 ## Files
 
-- `index.html`: the whole app, with HTML, CSS and JavaScript in one file and no build step.
+- `index.html`: the app itself, with HTML, CSS and JavaScript in one file and no build step.
+- `lessons.js`: the lesson word lists. Each word is `[word, article, plural, type, english, example_de, example_en, gap, tip]`, and `gap` must appear in `example_de`.
 
 ## Your data
 

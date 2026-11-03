@@ -62,7 +62,7 @@ h1 { font-size: 2.3rem; font-weight: 700; letter-spacing: .01em; }
 .note { background: var(--surface); border: 1px dashed var(--line); padding: 10px 14px; border-radius: 10px; color: var(--muted); font-size: .92rem; }
 
 nav.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); overflow-x: auto; }
-nav.tabs button { background: none; border: 0; border-bottom: 3px solid transparent; padding: 8px 14px 7px; cursor: pointer;
+nav.tabs button { background: none; border: 0; border-bottom: 3px solid transparent; padding: 8px 12px 7px; cursor: pointer;
   font: 600 1.05rem var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
 nav.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
 
@@ -143,6 +143,19 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .dots { display: flex; gap: 3px; }
 .dots i { width: 8px; height: 8px; border-radius: 2px; background: var(--line); }
 .dots i.on { background: var(--good); }
+.setpick { display: flex; align-items: center; gap: 10px; }
+.setpick label { font: 600 1.05rem var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.setpick select { flex: 1; width: auto; }
+.lessons { display: flex; flex-direction: column; gap: 10px; }
+.lesson { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.lhead { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: start; }
+.lnum { font: 700 1.7rem var(--display); color: var(--muted); line-height: 1; font-variant-numeric: tabular-nums; }
+.lesson.done .lnum { color: var(--good); }
+.ltitle { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ltitle h3 { font-size: 1.35rem; font-weight: 700; }
+.lstat { margin-right: auto; }
+.lwords { list-style: none; margin: 0; padding: 10px 0 0; border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px 16px; }
+.lwords li { display: flex; gap: 8px; align-items: baseline; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mbar { height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
 .mbar i { display: block; height: 100%; background: var(--good); }
 .mprog { display: flex; flex-direction: column; gap: 6px; background: var(--bg); border-radius: 8px; padding: 10px 12px; }
@@ -201,13 +214,16 @@ tr + tr td { border-top: 1px solid var(--line); }
 
   <nav class="tabs" role="tablist">
     <button type="button" role="tab" data-tab="practice" aria-selected="true">Practice</button>
-    <button type="button" role="tab" data-tab="words" aria-selected="false">My words</button>
-    <button type="button" role="tab" data-tab="add" aria-selected="false">Add words</button>
-    <button type="button" role="tab" data-tab="rules" aria-selected="false">Rules &amp; tips</button>
+    <button type="button" role="tab" data-tab="lessons" aria-selected="false">Lessons</button>
+    <button type="button" role="tab" data-tab="words" aria-selected="false">Words</button>
+    <button type="button" role="tab" data-tab="add" aria-selected="false">Add</button>
+    <button type="button" role="tab" data-tab="rules" aria-selected="false">Tips</button>
   </nav>
 
   <main>
     <section id="view-practice" class="panel"><p class="note">Loading your words…</p></section>
+
+    <section id="view-lessons" class="panel" hidden></section>
 
     <section id="view-words" class="panel" hidden>
       <div class="toolbar">
@@ -268,6 +284,7 @@ tr + tr td { border-top: 1px solid var(--line); }
 </div>
 <div id="toast" role="status" hidden></div>
 
+<script src="lessons.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 const TYPES = ["noun", "verb", "adjective", "adverb", "phrase", "other"];
@@ -279,23 +296,13 @@ const MODES = [
   { id: "type", name: "Type it", desc: "See the English meaning and type the German, with the article." },
   { id: "gap", name: "Fill the gap", desc: "Complete an easy sentence with the missing word." },
 ];
-const STARTERS = [
-  ["Hund", "der", "Hunde", "noun", "dog", "Der Hund ist groß.", "The dog is big.", "Hund", "Picture a big blue dog: der Hund."],
-  ["Katze", "die", "Katzen", "noun", "cat", "Die Katze schläft.", "The cat is sleeping.", "Katze", "Most nouns ending in -e are die."],
-  ["Haus", "das", "Häuser", "noun", "house", "Das Haus ist alt.", "The house is old.", "Haus", "The plural gets an umlaut: Haus, Häuser."],
-  ["Tisch", "der", "Tische", "noun", "table", "Der Tisch ist neu.", "The table is new.", "Tisch", "Sounds like English 'dish', and a dish goes on der Tisch."],
-  ["Tür", "die", "Türen", "noun", "door", "Die Tür ist offen.", "The door is open.", "Tür", "For ü, say 'ee' with rounded lips."],
-  ["Buch", "das", "Bücher", "noun", "book", "Ich lese das Buch.", "I am reading the book.", "Buch", "Like Haus, the plural gets an umlaut: Bücher."],
-  ["Wasser", "das", "-", "noun", "water", "Ich trinke Wasser.", "I drink water.", "Wasser", "W sounds like English v: 'vasser'."],
-  ["Frau", "die", "Frauen", "noun", "woman; Mrs.", "Die Frau heißt Anna.", "The woman is called Anna.", "Frau", "Frau also means Mrs.: Frau Müller."],
-  ["Mann", "der", "Männer", "noun", "man", "Der Mann ist nett.", "The man is nice.", "Mann", "Male people are der: der Mann, der Vater."],
-  ["Kind", "das", "Kinder", "noun", "child", "Das Kind spielt.", "The child is playing.", "Kind", "Kindergarten means children's garden."],
-  ["gehen", null, null, "verb", "to go (on foot)", "Ich gehe nach Hause.", "I am going home.", "gehe", "ich gehe, du gehst, er geht. Use fahren for car or train."],
-  ["schön", null, null, "adjective", "beautiful; nice", "Das Wetter ist schön.", "The weather is nice.", "schön", "Danke schön! means thank you very much."],
-];
+const LESSONS = (window.LESSONS || []).map((l, i) => ({ ...l, n: i + 1 }));
+const TABS = ["practice", "lessons", "words", "add", "rules"];
 
 let words = [], meta = { streak: 0, lastDay: "" }, store = null, loaded = false;
-let tab = "practice", session = null, openId = null, editId = null, filter = "all", query = "";
+let tab = "practice", session = null, openId = null, editId = null, filter = "all", query = "", openLesson = null;
+let practiceSet = "all";
+try { practiceSet = localStorage.getItem("wk.set") || "all"; } catch {}
 let drafts = [], addText = "", addStatus = "", busy = false, ctl = null, sampleOff = false;
 const sampleP = window.claude ? window.claude.use("sample").catch(() => null) : Promise.resolve(null);
 
@@ -339,7 +346,16 @@ function gapParts(w) {
 // Recall modes open for a word once it reaches box 2 in Flashcards, and stay open after the first try.
 const LOCKED_UNTIL_CARDS = ["type", "gap"];
 const unlocked = (w, m) => !LOCKED_UNTIL_CARDS.includes(m) || prog(w, "cards").box >= 2 || prog(w, m).seen > 0;
-const applicable = mode => words.filter(w => appliesTo(w, mode));
+const applicable = mode => setWords().filter(w => appliesTo(w, mode));
+const wkey = (word, article) => norm(word) + "|" + (article || "");
+const typeLabel = t => t === "adjective" ? "adj." : t || "word";
+// The words the Practice tab works on: everything, or one lesson's words you've added.
+function setWords() {
+  const l = practiceSet !== "all" && LESSONS.find(x => x.id === practiceSet);
+  if (!l) return words;
+  const keys = new Set(l.words.map(t => wkey(t[0], t[1])));
+  return words.filter(w => keys.has(wkey(w.word, w.article)));
+}
 function eligible(mode) { return applicable(mode).filter(w => unlocked(w, mode)); }
 let toastT;
 function toast(m) { const t = $("#toast"); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3500); }
@@ -367,7 +383,7 @@ function speakBtn(t) {
 // ---------- storage ----------
 async function init() {
   let saved = null; try { saved = localStorage.getItem("wk.tab"); } catch {}
-  setTab(["practice", "words", "add", "rules"].includes(saved) ? saved : "practice");
+  setTab(TABS.includes(saved) ? saved : "practice");
   let db = null, user = null, uid = null;
   if (window.claude) {
     try { [db, user] = await Promise.all([window.claude.use("db"), window.claude.use("user")]); uid = user ? await user.id() : null; } catch {}
@@ -412,19 +428,72 @@ function onData() {
   renderStats();
   if (tab === "words" && !editId) renderWordList();
   if (tab === "practice" && !session) renderPractice();
+  if (tab === "lessons") renderLessons();
 }
-async function addStarters(btn) {
+
+// ---------- lessons ----------
+function lessonState(l) {
+  const have = new Map(words.map(w => [wkey(w.word, w.article), w]));
+  const mine = l.words.map(t => have.get(wkey(t[0], t[1]))).filter(Boolean);
+  const known = mine.filter(w => prog(w, "cards").box >= 2).length;
+  const mastered = mine.filter(w => weakest(w) >= 5).length;
+  const total = l.words.length;
+  return { mine, known, mastered, total, missing: total - mine.length,
+    status: !mine.length ? "new" : mastered === total ? "learned" : "started" };
+}
+// Suggest the next lesson once at least 70% of the words from started lessons reach box 2 in Flashcards.
+function upNextId() {
+  const states = LESSONS.map(l => [l, lessonState(l)]);
+  const started = states.filter(([, s]) => s.status !== "new");
+  const known = started.reduce((n, [, s]) => n + s.known, 0);
+  const have = started.reduce((n, [, s]) => n + s.mine.length, 0);
+  if (started.length && known < 0.7 * have) return null;
+  const next = states.find(([, s]) => s.status === "new");
+  return next ? next[0].id : null;
+}
+async function startLesson(l, btn) {
   if (!ready()) return;
   if (btn) btn.disabled = true;
+  const have = new Set(words.map(w => wkey(w.word, w.article)));
+  let n = 0;
   try {
-    for (const s of STARTERS) {
-      const [word, article, plural, type, english, example_de, example_en, gap, tip] = s;
-      if (words.some(w => w.word === word)) continue;
-      await store.put({ id: newId(), word, article, plural, type, english, example_de, example_en, gap, tip, progress: {}, added: Date.now() });
+    for (const t of l.words) {
+      if (have.has(wkey(t[0], t[1]))) continue;
+      const [word, article, plural, type, english, example_de, example_en, gap, tip] = t;
+      await store.put({ id: newId(), word, article, plural, type, english, example_de, example_en, gap, tip, lesson: l.id, progress: {}, added: Date.now() });
+      n++;
     }
-    toast("Added 12 starter words. Delete any you don't want in My words.");
-  } catch { toast("Couldn't save the starter words. Try again."); if (btn) btn.disabled = false; }
+    toast(n ? "Added " + n + " words from lesson " + l.n + ". Start with Flashcards." : "You already have every word in this lesson.");
+  } catch { toast("Couldn't add all the words. Try again."); if (btn) btn.disabled = false; }
 }
+function renderLessons() {
+  const el = $("#view-lessons");
+  if (!LESSONS.length) { el.replaceChildren(h("p", { class: "note" }, "The lessons couldn't be loaded. Reload the page to try again.")); return; }
+  const next = upNextId();
+  el.replaceChildren(
+    h("p", { class: "muted" }, "Each lesson holds about 20 useful beginner words on one topic. Start a lesson, practise until most of its words reach box 2 in Flashcards, then start the next one."),
+    h("div", { class: "lessons" }, LESSONS.map(l => lessonCard(l, next))));
+}
+function lessonCard(l, next) {
+  const s = lessonState(l), open = openLesson === l.id;
+  const status = s.status === "learned" ? "Learned" : s.status === "started" ? s.known + " / " + s.total + " known" : "Not started";
+  const card = h("div", { class: "lesson" + (s.status === "learned" ? " done" : "") },
+    h("div", { class: "lhead" },
+      h("span", { class: "lnum" }, String(l.n).padStart(2, "0")),
+      h("div", { class: "ltitle" }, h("h3", {}, l.title), h("p", { class: "muted small" }, l.desc)),
+      next === l.id ? h("span", { class: "pill due" }, "Up next") : null),
+    s.status !== "new" ? h("div", { class: "mbar", "aria-label": s.known + " of " + s.total + " known" }, h("i", { style: "width:" + (s.known / s.total * 100) + "%" })) : null,
+    h("div", { class: "row" },
+      h("span", { class: "muted small lstat" }, s.total + " words · " + status),
+      s.missing ? h("button", { class: "btn sm" + (s.status === "new" ? " primary" : ""), type: "button", onclick: e => startLesson(l, e.currentTarget) },
+        s.status === "new" ? "Start lesson" : "Add " + s.missing + " missing") : null,
+      s.status !== "new" ? h("button", { class: "btn sm", type: "button", onclick: () => { practiceSet = l.id; savePracticeSet(); setTab("practice"); } }, "Practise") : null,
+      h("button", { class: "btn sm ghost", type: "button", "aria-expanded": String(open), onclick: () => { openLesson = open ? null : l.id; renderLessons(); } }, open ? "Hide words" : "Show words")));
+  if (open) card.append(h("ul", { class: "lwords" }, l.words.map(t =>
+    h("li", { class: "g-" + (t[1] || "none") }, h("span", { class: "chip" }, t[1] || typeLabel(t[3])), h("strong", { class: "gword" }, t[0]), h("span", { class: "muted" }, t[4])))));
+  return card;
+}
+function savePracticeSet() { try { localStorage.setItem("wk.set", practiceSet); } catch {} }
 
 // ---------- stats & tabs ----------
 function renderStats() {
@@ -449,8 +518,9 @@ function setTab(t) {
   tab = t;
   try { localStorage.setItem("wk.tab", t); } catch {}
   document.querySelectorAll("nav.tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === t)));
-  for (const v of ["practice", "words", "add", "rules"]) $("#view-" + v).hidden = v !== t;
+  for (const v of TABS) $("#view-" + v).hidden = v !== t;
   if (t === "practice") renderPractice();
+  if (t === "lessons") renderLessons();
   if (t === "words") renderWords();
   if (t === "add") renderAdd();
 }
@@ -471,10 +541,10 @@ function details(w) {
 function emptyState() {
   return h("div", { class: "empty" },
     h("h2", {}, "Your word box is empty"),
-    h("p", { class: "muted" }, "Add German words as you meet them. Claude writes a card for each one: the article, the plural, an easy example sentence and a tip."),
+    h("p", { class: "muted" }, "Start with a ready-made lesson, or add German words as you meet them. Every card has the article, the plural, an easy example sentence and a tip."),
     h("div", { class: "row" },
-      h("button", { class: "btn primary", type: "button", onclick: () => setTab("add") }, "Add my words"),
-      h("button", { class: "btn", type: "button", onclick: e => addStarters(e.currentTarget) }, "Add 12 starter words")));
+      LESSONS.length ? h("button", { class: "btn primary", type: "button", onclick: e => startLesson(LESSONS[0], e.currentTarget) }, "Start lesson 1: " + LESSONS[0].title) : null,
+      h("button", { class: "btn", type: "button", onclick: () => setTab("add") }, "Add my own words")));
 }
 function renderPractice() {
   if (session) return renderSession();
@@ -482,6 +552,13 @@ function renderPractice() {
   el.replaceChildren();
   if (!loaded && !words.length) { el.append(h("p", { class: "note" }, "Loading your words…")); return; }
   if (!words.length) { el.append(emptyState()); return; }
+  const sets = LESSONS.filter(l => lessonState(l).mine.length);
+  if (practiceSet !== "all" && !sets.some(l => l.id === practiceSet)) { practiceSet = "all"; savePracticeSet(); }
+  const pick = h("select", { id: "practice-set", onchange: e => { practiceSet = e.target.value; savePracticeSet(); renderPractice(); } },
+    h("option", { value: "all" }, "All my words (" + words.length + ")"),
+    sets.map(l => h("option", { value: l.id }, "Lesson " + l.n + ": " + l.title + " (" + lessonState(l).mine.length + ")")));
+  pick.value = practiceSet;
+  el.append(h("div", { class: "setpick" }, h("label", { for: "practice-set" }, "Practise"), pick));
   const grid = h("div", { class: "modes" });
   for (const m of MODES) {
     const all = applicable(m.id), pool = eligible(m.id), due = pool.filter(w => isDueIn(w, m.id)).length;
@@ -678,7 +755,7 @@ function wordItem(w) {
   const open = openId === w.id;
   const item = h("div", { class: "witem " + gclass(w) },
     h("button", { class: "wrow", type: "button", "aria-expanded": String(open), onclick: () => { openId = open ? null : w.id; editId = null; renderWordList(); } },
-      h("span", { class: "chip" }, w.article || (w.type === "adjective" ? "adj." : w.type || "word")),
+      h("span", { class: "chip" }, w.article || typeLabel(w.type)),
       h("span", { class: "wmain" }, h("strong", { class: "gword" }, w.word), h("span", { class: "muted" }, "  " + (w.english || ""))),
       dots(weakest(w), "Weakest mode: box ")));
   if (!open) return item;
