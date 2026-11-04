@@ -80,6 +80,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 
 .modes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.modes .mode:first-child { grid-column: 1 / -1; }
 @media (max-width: 540px) { .modes { grid-template-columns: 1fr; } }
 .mode { text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px;
   display: flex; flex-direction: column; gap: 6px; cursor: pointer; color: var(--ink); font: inherit; }
@@ -130,6 +131,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .empty { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 24px; display: flex; flex-direction: column; gap: 12px; }
 .toolbar { display: flex; flex-direction: column; gap: 10px; }
 .filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.selects { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.selects .field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.selects label { font-size: .72rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
+@media (max-width: 540px) { .selects { grid-template-columns: 1fr; } }
+.tag-hard { color: var(--bad); font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; margin-left: 8px; }
 .filters button { font: 600 .88rem var(--body); padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); cursor: pointer; }
 .filters button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .wlist { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
@@ -229,6 +235,7 @@ tr + tr td { border-top: 1px solid var(--line); }
       <div class="toolbar">
         <input id="search" type="search" placeholder="Search German or English" aria-label="Search words">
         <div class="filters" id="filters"></div>
+        <div class="selects" id="wselects"></div>
       </div>
       <div id="wlist"></div>
     </section>
@@ -293,6 +300,7 @@ const DAY = 864e5;
 const MODES = [
   { id: "cards", name: "Flashcards", desc: "See the German word. Recall its article and meaning, then check." },
   { id: "article", name: "der / die / das", desc: "Pick the right article for each noun. Keys 1, 2, 3 work too." },
+  { id: "listen", name: "Listen", desc: "Hear a German word and type what you hear." },
   { id: "type", name: "Type it", desc: "See the English meaning and type the German, with the article." },
   { id: "gap", name: "Fill the gap", desc: "Complete an easy sentence with the missing word." },
 ];
@@ -301,6 +309,7 @@ const TABS = ["practice", "lessons", "words", "add", "rules"];
 
 let words = [], meta = { streak: 0, lastDay: "" }, store = null, loaded = false;
 let tab = "practice", session = null, openId = null, editId = null, filter = "all", query = "", openLesson = null;
+let fLesson = "all", fProgress = "all", fDifficulty = "all";
 let practiceSet = "all";
 try { practiceSet = localStorage.getItem("wk.set") || "all"; } catch {}
 let drafts = [], addText = "", addStatus = "", busy = false, ctl = null, sampleOff = false;
@@ -320,7 +329,7 @@ function h(tag, attrs, ...kids) {
 }
 const gclass = w => "g-" + (w.article || "none");
 const label = w => (w.article ? w.article + " " : "") + w.word;
-const MODE_IDS = ["cards", "article", "type", "gap"];
+const MODE_IDS = ["cards", "article", "listen", "type", "gap"];
 // Each practice mode keeps its own box per word: knowing a flashcard doesn't mean you can type it.
 function prog(w, m) {
   const p = w.progress && w.progress[m];
@@ -328,7 +337,7 @@ function prog(w, m) {
   if (m === "cards" && w.box) return { box: w.box, due: w.due || 0, seen: w.seen || 0, right: w.right || 0 }; // progress saved before modes were split
   return { box: 1, due: 0, seen: 0, right: 0 };
 }
-const appliesTo = (w, m) => m === "article" ? !!w.article : m === "gap" ? !!gapParts(w) : true;
+const appliesTo = (w, m) => m === "article" ? !!w.article : m === "gap" ? !!gapParts(w) : m === "listen" ? canSpeak : true;
 const isDueIn = (w, m) => (prog(w, m).due || 0) <= Date.now();
 const weakest = w => Math.min(...MODE_IDS.filter(m => appliesTo(w, m)).map(m => prog(w, m).box || 1));
 const dueCount = () => words.reduce((n, w) => n + MODE_IDS.filter(m => appliesTo(w, m) && unlocked(w, m) && isDueIn(w, m)).length, 0);
@@ -344,13 +353,33 @@ function gapParts(w) {
   return i < 0 ? null : [s.slice(0, i), s.slice(i, i + g.length), s.slice(i + g.length)];
 }
 // Recall modes open for a word once it reaches box 2 in Flashcards, and stay open after the first try.
-const LOCKED_UNTIL_CARDS = ["type", "gap"];
+const LOCKED_UNTIL_CARDS = ["listen", "type", "gap"];
 const unlocked = (w, m) => !LOCKED_UNTIL_CARDS.includes(m) || prog(w, "cards").box >= 2 || prog(w, m).seen > 0;
 const applicable = mode => setWords().filter(w => appliesTo(w, mode));
 const wkey = (word, article) => norm(word) + "|" + (article || "");
 const typeLabel = t => t === "adjective" ? "adj." : t || "word";
-// The words the Practice tab works on: everything, or one lesson's words you've added.
+const LESSON_OF = new Map(LESSONS.flatMap(l => l.words.map(t => [wkey(t[0], t[1]), l])));
+const lessonOf = w => LESSON_OF.get(wkey(w.word, w.article)) || null;
+// Hard: the last answer in some mode was wrong, or under 60% right overall. Easy: 85% or more right.
+function difficulty(w) {
+  let seen = 0, right = 0, lastWrong = false;
+  for (const m of MODE_IDS) {
+    const p = prog(w, m);
+    seen += p.seen || 0; right += p.right || 0;
+    if (p.seen && (p.box || 1) === 1) lastWrong = true;
+  }
+  if (!seen) return "new";
+  if (lastWrong || (seen >= 3 && right / seen < 0.6)) return "hard";
+  return seen >= 3 && right / seen >= 0.85 ? "easy" : "medium";
+}
+function progressOf(w) {
+  if (weakest(w) >= 5) return "mastered";
+  if (prog(w, "cards").box >= 2) return "known";
+  return MODE_IDS.some(m => prog(w, m).seen) ? "learning" : "new";
+}
+// The words the Practice tab works on: everything, your hard words, or one lesson's words you've added.
 function setWords() {
+  if (practiceSet === "hard") return words.filter(w => difficulty(w) === "hard");
   const l = practiceSet !== "all" && LESSONS.find(x => x.id === practiceSet);
   if (!l) return words;
   const keys = new Set(l.words.map(t => wkey(t[0], t[1])));
@@ -364,10 +393,10 @@ function ready() { if (!store) toast("Still connecting. Try again in a moment.")
 
 // ---------- speech ----------
 const canSpeak = "speechSynthesis" in window;
-function speak(t) {
+function speak(t, rate = 0.9) {
   try {
     const u = new SpeechSynthesisUtterance(t);
-    u.lang = "de-DE"; u.rate = 0.9;
+    u.lang = "de-DE"; u.rate = rate;
     const v = speechSynthesis.getVoices().find(v => (v.lang || "").toLowerCase().startsWith("de"));
     if (v) u.voice = v;
     speechSynthesis.cancel(); speechSynthesis.speak(u);
@@ -553,9 +582,10 @@ function renderPractice() {
   if (!loaded && !words.length) { el.append(h("p", { class: "note" }, "Loading your words…")); return; }
   if (!words.length) { el.append(emptyState()); return; }
   const sets = LESSONS.filter(l => lessonState(l).mine.length);
-  if (practiceSet !== "all" && !sets.some(l => l.id === practiceSet)) { practiceSet = "all"; savePracticeSet(); }
+  if (!["all", "hard"].includes(practiceSet) && !sets.some(l => l.id === practiceSet)) { practiceSet = "all"; savePracticeSet(); }
   const pick = h("select", { id: "practice-set", onchange: e => { practiceSet = e.target.value; savePracticeSet(); renderPractice(); } },
     h("option", { value: "all" }, "All my words (" + words.length + ")"),
+    h("option", { value: "hard" }, "Hard words (" + words.filter(w => difficulty(w) === "hard").length + ")"),
     sets.map(l => h("option", { value: l.id }, "Lesson " + l.n + ": " + l.title + " (" + lessonState(l).mine.length + ")")));
   pick.value = practiceSet;
   el.append(h("div", { class: "setpick" }, h("label", { for: "practice-set" }, "Practise"), pick));
@@ -563,7 +593,8 @@ function renderPractice() {
   for (const m of MODES) {
     const all = applicable(m.id), pool = eligible(m.id), due = pool.filter(w => isDueIn(w, m.id)).length;
     const mastered = all.filter(w => prog(w, m.id).box >= 5).length, locked = all.length - pool.length;
-    const pill = !all.length ? (m.id === "article" ? "Add some nouns first" : "No example sentences yet")
+    const pill = !all.length ? (m.id === "listen" && !canSpeak ? "This browser can't speak German"
+        : practiceSet === "hard" ? "No hard words here" : m.id === "article" ? "No nouns here" : m.id === "gap" ? "No example sentences yet" : "Nothing to practise")
       : !pool.length ? "Locked: get words to box 2 in Flashcards"
       : due ? due + " due now" : "none due";
     grid.append(h("button", { class: "mode", type: "button", disabled: !pool.length, onclick: () => startSession(m.id) },
@@ -573,7 +604,7 @@ function renderPractice() {
         all.length ? h("span", { class: "muted small" }, mastered + " / " + all.length + " mastered" + (locked && pool.length ? " · " + locked + " locked" : "")) : null)));
   }
   el.append(grid, h("p", { class: "muted small" },
-    "Each mode tracks its own progress. A right answer moves the word up one box (1 → 5) in that mode only, so you see it less often there. A wrong answer sends it back to box 1 in that mode. A word counts as mastered when it reaches box 5 in every mode that applies to it. Type it and Fill the gap open for a word once it reaches box 2 in Flashcards, so you only write words you already recognise."));
+    "Each mode tracks its own progress. A right answer moves the word up one box (1 → 5) in that mode only, so you see it less often there. A wrong answer sends it back to box 1 in that mode. A word counts as mastered when it reaches box 5 in every mode that applies to it. Listen, Type it and Fill the gap open for a word once it reaches box 2 in Flashcards, so you only write words you already recognise. Hard words are the ones you got wrong last time or get right less than 60% of the time."));
 }
 function startSession(mode) {
   const pool = eligible(mode), due = pool.filter(w => isDueIn(w, mode));
@@ -582,7 +613,7 @@ function startSession(mode) {
   renderSession();
 }
 function endSession() { session = null; renderPractice(); }
-function next() { session.i++; session.state = "ask"; session.revealed = false; session.fb = null; session.picked = null; renderSession(); }
+function next() { session.i++; session.state = "ask"; session.revealed = false; session.fb = null; session.picked = null; session.played = false; renderSession(); }
 function answer(w, ok) {
   if (session.state !== "ask") return;
   session.state = "done";
@@ -604,7 +635,7 @@ function renderSession() {
     h("button", { class: "btn ghost sm", type: "button", onclick: endSession }, s.i >= total ? "Close" : "End")));
   if (s.i >= total) { el.append(summary()); return; }
   const w = s.items[s.i];
-  el.append({ cards: cardFlash, article: cardArticle, type: cardType, gap: cardGap }[s.mode](w));
+  el.append({ cards: cardFlash, article: cardArticle, listen: cardListen, type: cardType, gap: cardGap }[s.mode](w));
   const f = el.querySelector("[data-focus]");
   if (f) f.focus({ preventScroll: true });
 }
@@ -680,6 +711,32 @@ function cardType(w) {
   }
   return c;
 }
+function cardListen(w) {
+  const say = label(w);
+  const c = h("div", { class: "card" }, h("span", { class: "kicker" }, "Listen · " + (w.type || "word") + (w.article ? " · write it with der, die or das" : "")),
+    h("div", { class: "row" },
+      h("button", { class: "btn", type: "button", onclick: () => speak(say) }, "Play again"),
+      h("button", { class: "btn ghost", type: "button", onclick: () => speak(say, 0.55) }, "Slower")));
+  if (session.state === "ask") {
+    // Each card plays once by itself; it is shown right after a click, so the browser allows the sound.
+    if (!session.played) { session.played = true; setTimeout(() => speak(say), 150); }
+    const input = answerInput("listen-input");
+    const form = h("form", { class: "answer-form", onsubmit: e => {
+      e.preventDefault();
+      if (!input.value.trim()) return;
+      session.fb = { ...checkType(w, input.value), given: input.value };
+      answer(w, session.fb.ok); renderSession();
+    } }, input, umlautKeys(input), h("div", { class: "row" },
+      h("button", { class: "btn primary", type: "submit" }, "Check"),
+      h("button", { class: "btn ghost", type: "button", onclick: () => { session.fb = { ok: false, msg: "It was " + say + ".", given: "" }; answer(w, false); renderSession(); } }, "I don't know")));
+    c.append(form);
+  } else {
+    c.append(h("p", { class: "fb " + (session.fb.ok ? "ok" : "no") }, session.fb.msg),
+      session.fb.given && !session.fb.ok ? h("p", { class: "muted" }, "You wrote: " + session.fb.given) : null,
+      details(w), h("div", { class: "row" }, nextBtn()));
+  }
+  return c;
+}
 function cardGap(w) {
   const [before, gap, after] = gapParts(w);
   const c = h("div", { class: "card" }, h("span", { class: "kicker" }, "Fill the gap · " + (w.english || "")));
@@ -732,19 +789,52 @@ function renderWordList() {
   const count = k => k === "all" ? words.length : k === "other" ? words.filter(w => !w.article).length : words.filter(w => w.article === k).length;
   $("#filters").replaceChildren(...groups.map(([k, l]) => h("button", { type: "button", "aria-pressed": String(filter === k),
     class: k !== "all" && k !== "other" ? "g-" + k : null, onclick: () => { filter = k; renderWordList(); } }, l + " · " + count(k))));
+  renderWordSelects();
   const q = norm(query);
   const list = words.filter(w => filter === "all" || (filter === "other" ? !w.article : w.article === filter))
+    .filter(w => fLesson === "all" || (fLesson === "own" ? !lessonOf(w) : lessonOf(w)?.id === fLesson))
+    .filter(w => fProgress === "all" || progressOf(w) === fProgress)
+    .filter(w => fDifficulty === "all" || difficulty(w) === fDifficulty)
     .filter(w => !q || norm(label(w)).includes(q) || norm(w.english).includes(q))
     .sort((a, b) => a.word.localeCompare(b.word, "de"));
   const el = $("#wlist");
   if (!words.length) { el.replaceChildren(loaded ? emptyState() : h("p", { class: "note" }, "Loading your words…")); return; }
-  if (!list.length) { el.replaceChildren(h("p", { class: "note" }, "No words match.")); return; }
-  el.replaceChildren(h("div", { class: "wlist" }, list.map(wordItem)));
+  const filtered = filter !== "all" || fLesson !== "all" || fProgress !== "all" || fDifficulty !== "all" || q;
+  const reset = filtered ? h("button", { class: "btn sm ghost", type: "button", onclick: () => {
+    filter = fLesson = fProgress = fDifficulty = "all"; query = ""; $("#search").value = ""; renderWordList();
+  } }, "Clear filters") : null;
+  const countLine = h("div", { class: "row" }, h("span", { class: "muted small" }, list.length + " of " + words.length + " words"), reset);
+  if (!list.length) { el.replaceChildren(countLine, h("p", { class: "note" }, "No words match these filters.")); return; }
+  el.replaceChildren(countLine, h("div", { class: "wlist" }, list.map(wordItem)));
+}
+function renderWordSelects() {
+  const count = fn => words.filter(fn).length;
+  const sel = (id, lab, value, opts, set) => {
+    const s = h("select", { id, onchange: e => { set(e.target.value); renderWordList(); } },
+      opts.filter(([v, , n]) => v === "all" || v === value || n > 0).map(([v, t, n]) => h("option", { value: v }, v === "all" ? t : t + " (" + n + ")")));
+    s.value = value;
+    return h("div", { class: "field" }, h("label", { for: id }, lab), s);
+  };
+  $("#wselects").replaceChildren(
+    sel("f-lesson", "Lesson", fLesson, [["all", "All lessons"],
+      ...LESSONS.map(l => [l.id, l.n + ". " + l.title, count(w => lessonOf(w) === l)]),
+      ["own", "My own words", count(w => !lessonOf(w))]], v => fLesson = v),
+    sel("f-progress", "Progress", fProgress, [["all", "Any progress"],
+      ["new", "Not practised", count(w => progressOf(w) === "new")],
+      ["learning", "Learning", count(w => progressOf(w) === "learning")],
+      ["known", "Known (box 2+ in Flashcards)", count(w => progressOf(w) === "known")],
+      ["mastered", "Mastered", count(w => progressOf(w) === "mastered")]], v => fProgress = v),
+    sel("f-difficulty", "Difficulty", fDifficulty, [["all", "Any difficulty"],
+      ["hard", "Hard", count(w => difficulty(w) === "hard")],
+      ["medium", "Medium", count(w => difficulty(w) === "medium")],
+      ["easy", "Easy", count(w => difficulty(w) === "easy")],
+      ["new", "Not practised yet", count(w => difficulty(w) === "new")]], v => fDifficulty = v));
 }
 function dots(box, pre = "Box ") { return h("span", { class: "dots", title: pre + box + " of 5", "aria-label": pre + box + " of 5" }, [1, 2, 3, 4, 5].map(i => h("i", { class: i <= box ? "on" : null }))); }
 function progressTable(w) {
   return h("div", { class: "mprog" }, MODES.map(m => {
-    if (!appliesTo(w, m.id)) return h("div", { class: "mrow off" }, h("span", {}, m.name), h("span", { class: "muted small" }, m.id === "article" ? "nouns only" : "needs a sentence"));
+    if (!appliesTo(w, m.id)) return h("div", { class: "mrow off" }, h("span", {}, m.name),
+      h("span", { class: "muted small" }, { article: "nouns only", gap: "needs a sentence", listen: "no German voice in this browser" }[m.id]));
     if (!unlocked(w, m.id)) return h("div", { class: "mrow off" }, h("span", {}, m.name), h("span", { class: "muted small" }, "locked until box 2 in Flashcards"));
     const p = prog(w, m.id);
     return h("div", { class: "mrow" }, h("span", {}, m.name), dots(p.box || 1),
@@ -756,7 +846,8 @@ function wordItem(w) {
   const item = h("div", { class: "witem " + gclass(w) },
     h("button", { class: "wrow", type: "button", "aria-expanded": String(open), onclick: () => { openId = open ? null : w.id; editId = null; renderWordList(); } },
       h("span", { class: "chip" }, w.article || typeLabel(w.type)),
-      h("span", { class: "wmain" }, h("strong", { class: "gword" }, w.word), h("span", { class: "muted" }, "  " + (w.english || ""))),
+      h("span", { class: "wmain" }, h("strong", { class: "gword" }, w.word), difficulty(w) === "hard" ? h("span", { class: "tag-hard" }, "hard") : null,
+        h("span", { class: "muted" }, "  " + (w.english || ""))),
       dots(weakest(w), "Weakest mode: box ")));
   if (!open) return item;
   if (editId === w.id) {

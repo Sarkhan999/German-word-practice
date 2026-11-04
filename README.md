@@ -8,10 +8,13 @@ Live page: https://claude.ai/artifact/D95TwHpzp17kaTQmCey2po
 
 - **Flashcards**: see the German word, recall its meaning, then flip the card.
 - **der / die / das**: pick the right article for each noun.
+- **Listen**: hear the word read aloud and type what you hear.
 - **Type it**: see the English, type the German with its article.
 - **Fill the gap**: complete an easy sentence with the missing word.
 
-Each mode keeps its own progress, using boxes 1 to 5. Type it and Fill the gap open for a word once it reaches box 2 in Flashcards.
+Each mode keeps its own progress, using boxes 1 to 5. Listen, Type it and Fill the gap open for a word once it reaches box 2 in Flashcards.
+
+Practice can be limited to one lesson or to **Hard words**: words answered wrong last time in any mode, or right less than 60% of the time. The Words tab filters by article, lesson, progress and difficulty.
 
 ## Lessons
 
