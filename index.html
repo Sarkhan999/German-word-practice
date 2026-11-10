@@ -92,7 +92,16 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .pill { align-self: flex-start; font-size: .8rem; font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--none-bg); color: var(--muted); }
 .pill.due { background: var(--accent); color: #15171C; }
 
-.sessbar { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; }
+.sessbar { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center;
+  position: sticky; top: 0; z-index: 5; background: var(--bg); padding: calc(6px + env(safe-area-inset-top, 0px)) 0 6px; }
+/* Focus mode: while a round runs, only the round is on screen. */
+body.practising header, body.practising nav.tabs { display: none; }
+body.practising .wrap { padding-top: 4px; gap: 10px; }
+body.practising .big { font-size: clamp(2rem, 8vw, 3rem); }
+body.practising .card { padding: 18px; gap: 12px; }
+.answer-form input.is-ok { border-color: var(--good); color: var(--good); }
+.answer-form input.is-no { border-color: var(--bad); color: var(--bad); }
+.retry { color: var(--accent); font-weight: 600; }
 .prog { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
 .prog i { display: block; height: 100%; background: var(--accent); transition: width .3s; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 22px;
@@ -304,6 +313,16 @@ tr + tr td { border-top: 1px solid var(--line); }
 const $ = s => document.querySelector(s);
 const TYPES = ["noun", "verb", "adjective", "adverb", "phrase", "other"];
 const BOX_DAYS = [0, 0, 1, 3, 7, 14]; // days until a word in box n is due again
+const LONG_DAYS = [14, 30, 60, 120]; // box 5 again and again: each right answer stretches the gap
+const DAY_STARTS = 4; // a new practice day starts at 04:00, so late-night answers count for that night
+// Due at the start of the day `days` from today, not at the exact minute, so tomorrow's words are ready in the morning.
+function dueAfter(days) {
+  if (!days) return Date.now();
+  const d = new Date(Date.now() - DAY_STARTS * 36e5);
+  d.setHours(DAY_STARTS, 0, 0, 0);
+  d.setDate(d.getDate() + days);
+  return d.getTime();
+}
 const DAY = 864e5;
 const MODES = [
   { id: "cards", name: "Flashcards", desc: "See the German word. Recall its article and meaning, then check." },
@@ -378,7 +397,7 @@ function difficulty(w) {
   for (const m of MODE_IDS) {
     const p = prog(w, m);
     seen += p.seen || 0; right += p.right || 0;
-    if (p.seen && (p.box || 1) === 1) lastWrong = true;
+    if (p.seen && (p.last === 0 || (p.last == null && (p.box || 1) === 1))) lastWrong = true;
   }
   if (!seen) return "new";
   if (lastWrong || (seen >= 3 && right / seen < 0.6)) return "hard";
@@ -432,6 +451,15 @@ let sayOn = true;
 try { sayOn = localStorage.getItem("wk.say") !== "0"; } catch {}
 // After each answer: the word with its article, then the example sentence.
 function sayAnswer(w) { if (sayOn) speakSeq([label(w), w.example_de]); }
+let sayCardOn = true;
+try { sayCardOn = localStorage.getItem("wk.sayCard") !== "0"; } catch {}
+// When a new card appears: say the word, but never the part being tested.
+// Called from the tap that shows the card, so iOS Safari allows the sound.
+function sayCard(w, mode) {
+  if (!canSpeak) return;
+  if (mode === "listen") speak(label(w));
+  else if (sayCardOn && (mode === "cards" || mode === "article")) speak(w.word);
+}
 function whenText(t) {
   const d = t - Date.now();
   if (d <= 0) return "now";
@@ -598,6 +626,7 @@ function setTab(t) {
   try { localStorage.setItem("wk.tab", t); } catch {}
   document.querySelectorAll("nav.tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === t)));
   for (const v of TABS) $("#view-" + v).hidden = v !== t;
+  if (t !== "practice") document.body.classList.remove("practising");
   if (t === "practice") renderPractice();
   if (t === "lessons") renderLessons();
   if (t === "words") renderWords();
@@ -641,7 +670,10 @@ function renderPractice() {
   pick.value = practiceSet;
   const sayBox = h("input", { type: "checkbox", id: "say-toggle", onchange: e => { sayOn = e.target.checked; try { localStorage.setItem("wk.say", sayOn ? "1" : "0"); } catch {} } });
   sayBox.checked = sayOn;
+  const cardBox = h("input", { type: "checkbox", id: "saycard-toggle", onchange: e => { sayCardOn = e.target.checked; try { localStorage.setItem("wk.sayCard", sayCardOn ? "1" : "0"); } catch {} } });
+  cardBox.checked = sayCardOn;
   el.append(h("div", { class: "setpick" }, h("label", { for: "practice-set" }, "Practise"), pick,
+    canSpeak ? h("label", { class: "saytoggle", for: "saycard-toggle" }, cardBox, "Say each card") : null,
     canSpeak ? h("label", { class: "saytoggle", for: "say-toggle" }, sayBox, "Speak answers") : null));
   const grid = h("div", { class: "modes" });
   for (const m of MODES) {
@@ -658,7 +690,7 @@ function renderPractice() {
         all.length ? h("span", { class: "muted small" }, mastered + " / " + all.length + " mastered" + (locked && pool.length ? " · " + locked + " locked" : "")) : null)));
   }
   el.append(grid, h("p", { class: "muted small" },
-    "Rounds only show words that are due. A word in box 1 comes back right away, box 2 after 1 day, box 3 after 3 days, box 4 after 7 days and box 5 after 14 days. When nothing is due, you can still do an extra round, but it doesn't change your boxes. Each mode tracks its own progress. A right answer moves the word up one box (1 → 5) in that mode only, so you see it less often there. A wrong answer sends it back to box 1 in that mode. A word counts as mastered when it reaches box 5 in every mode that applies to it. Listen, Type it and Fill the gap open for a word once it reaches box 2 in Flashcards, so you only write words you already recognise. Hard words are the ones you got wrong last time or get right less than 60% of the time."));
+    "Rounds only show words that are due. A word in box 1 comes back right away, box 2 after 1 day, box 3 after 3 days, box 4 after 7 days and box 5 after 14 days. Words become due at the start of the day (from 4 am), not at the minute you answered them. Every further right answer in box 5 stretches the gap to 30, 60 and then 120 days. When nothing is due, you can still do an extra round, but it doesn't change your boxes. Words you miss come back once at the end of the same round for another try; that retry doesn't change their box. Each mode tracks its own progress. A right answer moves the word up one box (1 → 5) in that mode only, so you see it less often there. A wrong answer moves it down two boxes in that mode (box 5 → 3, box 4 → 2, box 3 or 2 → 1). A word counts as mastered when it reaches box 5 in every mode that applies to it. Listen, Type it and Fill the gap open for a word once it reaches box 2 in Flashcards, so you only write words you already recognise. Hard words are the ones you got wrong last time or get right less than 60% of the time."));
 }
 // A normal round holds only words that are due. With nothing due, an extra round reviews everything but saves no boxes,
 // so reviewing early can't push a word ahead of its schedule.
@@ -667,38 +699,59 @@ function startSession(mode) {
   const extra = !due.length;
   const q = shuffle(extra ? pool : due).slice(0, 15);
   session = { mode, extra, items: q.map(w => ({ ...w })), i: 0, right: 0, state: "ask" };
+  window.scrollTo(0, 0);
   renderSession();
 }
-function endSession() { session = null; renderPractice(); }
+function endSession() { session = null; document.body.classList.remove("practising"); renderPractice(); }
 function next() { session.i++; session.state = "ask"; session.revealed = false; session.fb = null; session.picked = null; session.played = false; renderSession(); }
 function answer(w, ok) {
   if (session.state !== "ask") return;
   session.state = "done";
-  if (ok) session.right++;
   if (session.mode !== "cards") sayAnswer(w); // Flashcards speaks when the answer is shown
+  // A missed word comes back once at the end of this round. The retry is practice only: its box was set by the first answer.
+  if (w.retry) return;
+  if (ok) session.right++;
+  else session.items.push({ ...w, retry: true });
   if (session.extra) return;
   grade(w, ok, session.mode);
 }
 async function grade(w, ok, mode) {
   const p = prog(words.find(x => x.id === w.id) || w, mode);
-  const box = ok ? Math.min(5, (p.box || 1) + 1) : 1;
-  const f = { box, due: Date.now() + BOX_DAYS[box] * DAY, seen: (p.seen || 0) + 1, right: (p.right || 0) + (ok ? 1 : 0) };
+  const was = p.box || 1;
+  // Right: up one box. Wrong: down two boxes (never below 1), so one slip on a well-known word isn't a full reset.
+  const box = ok ? Math.min(5, was + 1) : Math.max(1, was - 2);
+  // In box 5 each further right answer stretches the gap: 14 → 30 → 60 → 120 days.
+  const days = box < 5 ? BOX_DAYS[box] : was < 5 ? LONG_DAYS[0]
+    : LONG_DAYS[Math.min(LONG_DAYS.length - 1, LONG_DAYS.indexOf(p.ivl || LONG_DAYS[0]) + 1)];
+  const f = { box, due: dueAfter(days), seen: (p.seen || 0) + 1, right: (p.right || 0) + (ok ? 1 : 0), last: ok ? 1 : 0 };
+  if (box === 5) f.ivl = days;
   try { await store.patch(w.id, { progress: { [mode]: f } }); } catch { toast("Couldn't save your progress. Check your connection."); }
   bumpStreak();
 }
 function renderSession() {
   const el = $("#view-practice"), s = session, total = s.items.length;
-  el.replaceChildren(h("div", { class: "sessbar" },
-    h("span", { class: "muted small" }, MODES.find(m => m.id === s.mode).name + (s.extra ? " · extra" : "") + " · " + Math.min(s.i + 1, total) + " / " + total),
-    h("div", { class: "prog" }, h("i", { style: "width:" + (s.i / total * 100) + "%" })),
-    h("button", { class: "btn ghost sm", type: "button", onclick: endSession }, s.i >= total ? "Close" : "End")));
-  if (s.i >= total) { el.append(summary()); return; }
+  document.body.classList.add("practising");
   const w = s.items[s.i];
+  el.replaceChildren(h("div", { class: "sessbar" },
+    h("span", { class: "muted small" }, MODES.find(m => m.id === s.mode).name + (s.extra ? " · extra" : "") + " · " + Math.min(s.i + 1, total) + " / " + total,
+      w && w.retry ? h("span", { class: "retry" }, " · retry") : null),
+    h("div", { class: "prog" }, h("i", { style: "width:" + (s.i / total * 100) + "%" })),
+    h("button", { class: "btn ghost sm", type: "button", onclick: endSession }, s.i >= total ? "Close" : "✕ End")));
+  if (s.i >= total) { el.append(summary()); focusIn(el); return; }
   el.append({ cards: cardFlash, article: cardArticle, listen: cardListen, type: cardType, gap: cardGap }[s.mode](w));
+  focusIn(el);
+  if (s.state === "ask" && !s.played) { s.played = true; sayCard(w, s.mode); }
+}
+function focusIn(el) {
   const f = el.querySelector("[data-focus]");
   if (f) f.focus({ preventScroll: true });
 }
-function nextBtn() { return h("button", { class: "btn primary", type: "button", "data-focus": true, onclick: next }, session.i + 1 >= session.items.length ? "See results" : "Next"); }
+// Tapping these must not take focus from the answer field, or the iPhone keyboard closes.
+const keepFocus = e => e.preventDefault();
+function nextBtn(extra) {
+  return h("button", { class: "btn primary", type: "button", "data-focus": extra && extra.focus, onpointerdown: extra && extra.keep ? keepFocus : null, onclick: next },
+    session.i + 1 >= session.items.length ? "See results" : "Next");
+}
 function cardFlash(w) {
   const c = h("div", { class: "card" }, h("span", { class: "kicker" }, w.type || "word"),
     h("div", { class: "row" }, h("div", { class: "big" }, w.word), speakBtn(w.word)));
@@ -724,7 +777,7 @@ function cardArticle(w) {
   if (done) {
     const ok = session.picked === w.article;
     c.append(h("p", { class: "fb " + (ok ? "ok" : "no") }, ok ? "Richtig! It's " + label(w) + "." : "Not quite. It's " + label(w) + "."),
-      details(w), h("div", { class: "row" }, nextBtn()));
+      h("div", { class: "row" }, nextBtn({ focus: true })), details(w));
   }
   return c;
 }
@@ -740,90 +793,71 @@ function checkType(w, given) {
 }
 function umlautKeys(input) {
   return h("div", { class: "keys", "aria-label": "Special letters" }, ["ä", "ö", "ü", "ß"].map(k =>
-    h("button", { type: "button", onclick: () => {
+    h("button", { type: "button", onpointerdown: keepFocus, onclick: () => {
       const a = input.selectionStart ?? input.value.length, b = input.selectionEnd ?? a;
       input.value = input.value.slice(0, a) + k + input.value.slice(b);
       input.focus(); input.setSelectionRange(a + 1, a + 1);
     } }, k)));
 }
 function answerInput(id, cls) {
-  return h("input", { id, class: cls, type: "text", autocomplete: "off", autocapitalize: "off", spellcheck: "false", lang: "de", "aria-label": "Your answer", "data-focus": true });
+  return h("input", { id, class: cls, type: "text", autocomplete: "off", autocapitalize: "off", autocorrect: "off", spellcheck: "false", lang: "de",
+    enterkeyhint: "go", "aria-label": "Your answer", "data-focus": true });
+}
+// Typed answers (Type it, Listen, Fill the gap). The card is updated in place after Check, so the answer field
+// keeps focus and the iPhone keyboard stays open: feedback and Next appear right under the field, and pressing
+// Return again goes to the next card.
+function typedForm(w, input, body, check, giveUp, after) {
+  const actions = h("div", { class: "row" },
+    h("button", { class: "btn primary", type: "submit", onpointerdown: keepFocus }, "Check"),
+    h("button", { class: "btn ghost", type: "button", onpointerdown: keepFocus, onclick: () => finish(giveUp()) }, "I don't know"));
+  const keys = umlautKeys(input), result = h("div", { class: "answer-form" });
+  const form = h("form", { class: "answer-form", onsubmit: e => {
+    e.preventDefault();
+    if (session.state === "done") { next(); return; }
+    if (!input.value.trim()) return;
+    finish({ ...check(input.value), given: input.value });
+  } }, body, keys, actions, result);
+  function finish(fb) {
+    if (session.state !== "ask") return;
+    session.fb = fb;
+    answer(w, fb.ok);
+    input.classList.add(fb.ok ? "is-ok" : "is-no");
+    keys.hidden = true;
+    actions.replaceChildren(h("p", { class: "fb " + (fb.ok ? "ok" : "no") }, fb.msg));
+    result.replaceChildren(...[h("div", { class: "row" }, nextBtn({ keep: true })),
+      fb.given && !fb.ok ? h("p", { class: "muted" }, "You wrote: " + fb.given) : null, after(), details(w)].filter(Boolean));
+    input.focus({ preventScroll: true });
+  }
+  return form;
 }
 function cardType(w) {
-  const c = h("div", { class: "card" }, h("span", { class: "kicker" }, (w.type || "word") + (w.article ? " · write it with der, die or das" : "")),
-    h("div", { class: "big en" }, w.english || ""));
-  if (session.state === "ask") {
-    const input = answerInput("type-input");
-    const form = h("form", { class: "answer-form", onsubmit: e => {
-      e.preventDefault();
-      if (!input.value.trim()) return;
-      session.fb = { ...checkType(w, input.value), given: input.value };
-      answer(w, session.fb.ok); renderSession();
-    } }, input, umlautKeys(input), h("div", { class: "row" },
-      h("button", { class: "btn primary", type: "submit" }, "Check"),
-      h("button", { class: "btn ghost", type: "button", onclick: () => { session.fb = { ok: false, msg: "The answer is " + label(w) + ".", given: "" }; answer(w, false); renderSession(); } }, "I don't know")));
-    c.append(form);
-  } else {
-    c.append(h("p", { class: "fb " + (session.fb.ok ? "ok" : "no") }, session.fb.msg),
-      session.fb.given && !session.fb.ok ? h("p", { class: "muted" }, "You wrote: " + session.fb.given) : null,
-      details(w), h("div", { class: "row" }, nextBtn()));
-  }
-  return c;
+  const input = answerInput("type-input");
+  return h("div", { class: "card" }, h("span", { class: "kicker" }, (w.type || "word") + (w.article ? " · write it with der, die or das" : "")),
+    h("div", { class: "big en" }, w.english || ""),
+    typedForm(w, input, input, given => checkType(w, given),
+      () => ({ ok: false, msg: "The answer is " + label(w) + ".", given: "" }), () => null));
 }
 function cardListen(w) {
-  const say = label(w);
-  const c = h("div", { class: "card" }, h("span", { class: "kicker" }, "Listen · " + (w.type || "word") + (w.article ? " · write it with der, die or das" : "")),
+  const say = label(w), input = answerInput("listen-input");
+  return h("div", { class: "card" }, h("span", { class: "kicker" }, "Listen · " + (w.type || "word") + (w.article ? " · write it with der, die or das" : "")),
     h("div", { class: "row" },
-      h("button", { class: "btn", type: "button", onclick: () => speak(say) }, "Play again"),
-      h("button", { class: "btn ghost", type: "button", onclick: () => speak(say, 0.55) }, "Slower")));
-  if (session.state === "ask") {
-    // Each card plays once by itself; it is shown right after a click, so the browser allows the sound.
-    if (!session.played) { session.played = true; setTimeout(() => speak(say), 150); }
-    const input = answerInput("listen-input");
-    const form = h("form", { class: "answer-form", onsubmit: e => {
-      e.preventDefault();
-      if (!input.value.trim()) return;
-      session.fb = { ...checkType(w, input.value), given: input.value };
-      answer(w, session.fb.ok); renderSession();
-    } }, input, umlautKeys(input), h("div", { class: "row" },
-      h("button", { class: "btn primary", type: "submit" }, "Check"),
-      h("button", { class: "btn ghost", type: "button", onclick: () => { session.fb = { ok: false, msg: "It was " + say + ".", given: "" }; answer(w, false); renderSession(); } }, "I don't know")));
-    c.append(form);
-  } else {
-    c.append(h("p", { class: "fb " + (session.fb.ok ? "ok" : "no") }, session.fb.msg),
-      session.fb.given && !session.fb.ok ? h("p", { class: "muted" }, "You wrote: " + session.fb.given) : null,
-      details(w), h("div", { class: "row" }, nextBtn()));
-  }
-  return c;
+      h("button", { class: "btn", type: "button", onpointerdown: keepFocus, onclick: () => speak(say) }, "Play again"),
+      h("button", { class: "btn ghost", type: "button", onpointerdown: keepFocus, onclick: () => speak(say, 0.55) }, "Slower")),
+    typedForm(w, input, input, given => checkType(w, given),
+      () => ({ ok: false, msg: "It was " + say + ".", given: "" }), () => null));
 }
 function cardGap(w) {
-  const [before, gap, after] = gapParts(w);
-  const c = h("div", { class: "card" }, h("span", { class: "kicker" }, "Fill the gap · " + (w.english || "")));
-  if (session.state === "ask") {
-    const input = answerInput("gap-input");
-    const form = h("form", { class: "answer-form", onsubmit: e => {
-      e.preventDefault();
-      if (!input.value.trim()) return;
-      const ok = norm(input.value) === norm(gap);
-      session.fb = { ok, given: input.value, msg: ok ? "Richtig!" : "Not quite. The missing word is " + gap + "." };
-      answer(w, ok); renderSession();
-    } }, h("p", { class: "gapline", lang: "de" }, before, input, after), h("p", { class: "muted" }, w.example_en || ""),
-      umlautKeys(input), h("div", { class: "row" },
-        h("button", { class: "btn primary", type: "submit" }, "Check"),
-        h("button", { class: "btn ghost", type: "button", onclick: () => { session.fb = { ok: false, given: "", msg: "The missing word is " + gap + "." }; answer(w, false); renderSession(); } }, "I don't know")));
-    c.append(form);
-  } else {
-    c.append(h("p", { class: "fb " + (session.fb.ok ? "ok" : "no") }, session.fb.msg),
-      h("p", { class: "gapline " + gclass(w), lang: "de" }, before, h("mark", {}, gap), after),
-      session.fb.given && !session.fb.ok ? h("p", { class: "muted" }, "You wrote: " + session.fb.given) : null,
-      details(w), h("div", { class: "row" }, nextBtn()));
-  }
-  return c;
+  const [before, gap, after] = gapParts(w), input = answerInput("gap-input");
+  return h("div", { class: "card" }, h("span", { class: "kicker" }, "Fill the gap · " + (w.english || "")),
+    typedForm(w, input, [h("p", { class: "gapline", lang: "de" }, before, input, after), h("p", { class: "muted" }, w.example_en || "")],
+      given => { const ok = norm(given) === norm(gap); return { ok, msg: ok ? "Richtig!" : "Not quite. The missing word is " + gap + "." }; },
+      () => ({ ok: false, given: "", msg: "The missing word is " + gap + "." }),
+      () => session.fb.ok ? null : h("p", { class: "gapline " + gclass(w), lang: "de" }, before, h("mark", {}, gap), after)));
 }
 function summary() {
-  const { right, items, mode } = session, total = items.length, pct = right / total;
+  const { right, items, mode } = session, total = items.filter(x => !x.retry).length, pct = right / total;
   const msg = session.extra ? "Extra round: your boxes didn't change. Words come back on their own when they're due."
-    : pct === 1 ? "Perfekt! Every answer right." : pct >= 0.7 ? "Sehr gut! The misses come back next session." : "Gut gemacht for practising. The words you missed are back in box 1 and will come up again soon.";
+    : pct === 1 ? "Perfekt! Every answer right." : pct >= 0.7 ? "Sehr gut! The misses come back next session." : "Gut gemacht for practising. The words you missed moved down and will come up again soon.";
   return h("div", { class: "card" }, h("span", { class: "kicker" }, session.extra ? "Extra round done" : "Session done"),
     h("div", { class: "big" }, right + " / " + total), h("p", {}, msg),
     h("div", { class: "row" },
