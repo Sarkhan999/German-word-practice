@@ -411,6 +411,7 @@ function progressOf(w) {
 // The words the Practice tab works on: everything, your hard words, or one lesson's words you've added.
 function setWords() {
   if (practiceSet === "hard") return activeWords().filter(w => difficulty(w) === "hard");
+  if (practiceSet === "own") return activeWords().filter(w => !lessonOf(w));
   const l = practiceSet !== "all" && LESSONS.find(x => x.id === practiceSet);
   if (!l) return activeWords();
   const keys = new Set(l.words.map(t => wkey(t[0], t[1])));
@@ -661,11 +662,12 @@ function renderPractice() {
   if (!loaded && !words.length) { el.append(h("p", { class: "note" }, "Loading your words…")); return; }
   if (!words.length) { el.append(emptyState()); return; }
   const sets = LESSONS.filter(l => !lessonPaused(l.id) && lessonState(l).mine.length);
-  if (!["all", "hard"].includes(practiceSet) && !sets.some(l => l.id === practiceSet)) { practiceSet = "all"; savePracticeSet(); }
-  const active = activeWords(), pausedN = words.length - active.length;
+  const active = activeWords(), pausedN = words.length - active.length, ownN = active.filter(w => !lessonOf(w)).length;
+  if (!["all", "hard"].includes(practiceSet) && !(practiceSet === "own" && ownN) && !sets.some(l => l.id === practiceSet)) { practiceSet = "all"; savePracticeSet(); }
   const pick = h("select", { id: "practice-set", onchange: e => { practiceSet = e.target.value; savePracticeSet(); renderPractice(); } },
     h("option", { value: "all" }, "All my words (" + active.length + ")" + (pausedN ? " · " + pausedN + " paused" : "")),
     h("option", { value: "hard" }, "Hard words (" + active.filter(w => difficulty(w) === "hard").length + ")"),
+    ownN ? h("option", { value: "own" }, "My own words (" + ownN + ")") : null,
     sets.map(l => h("option", { value: l.id }, "Lesson " + l.n + ": " + l.title + " (" + lessonState(l).mine.length + ")")));
   pick.value = practiceSet;
   const sayBox = h("input", { type: "checkbox", id: "say-toggle", onchange: e => { sayOn = e.target.checked; try { localStorage.setItem("wk.say", sayOn ? "1" : "0"); } catch {} } });
@@ -680,7 +682,7 @@ function renderPractice() {
     const all = applicable(m.id), pool = eligible(m.id), due = pool.filter(w => isDueIn(w, m.id)).length;
     const mastered = all.filter(w => prog(w, m.id).box >= 5).length, locked = all.length - pool.length;
     const pill = !all.length ? (m.id === "listen" && !canSpeak ? "This browser can't speak German"
-        : practiceSet === "hard" ? "No hard words here" : m.id === "article" ? "No nouns here" : m.id === "gap" ? "No example sentences yet" : "Nothing to practise")
+        : practiceSet === "hard" ? "No hard words here" : practiceSet === "own" ? "No own words here" : m.id === "article" ? "No nouns here" : m.id === "gap" ? "No example sentences yet" : "Nothing to practise")
       : !pool.length ? "Locked: get words to box 2 in Flashcards"
       : due ? due + " due now" : "All done · next " + whenText(Math.min(...pool.map(w => prog(w, m.id).due || 0)));
     grid.append(h("button", { class: "mode" + (pool.length && !due ? " rest" : ""), type: "button", disabled: !pool.length, onclick: () => startSession(m.id) },
@@ -972,7 +974,7 @@ function editor(w, { onSave, onCancel, saveLabel, cancelLabel }) {
     h("input", { id: id(k), type: "text", value: w[k] || "", lang: ["english", "example_en"].includes(k) ? "en" : "de" }));
   const sel = (k, lab, opts) => h("div", { class: "field" }, h("label", { for: id(k) }, lab),
     h("select", { id: id(k) }, opts.map(([v, t]) => { const o = h("option", { value: v }, t); if ((w[k] || "") === v) o.selected = true; return o; })));
-  const dupe = w.draft && words.some(x => x.word.toLowerCase() === (w.word || "").toLowerCase());
+  const dupe = w.draft && words.some(x => wkey(x.word, x.article) === wkey(w.word || "", w.article));
   const read = () => {
     const v = k => form.querySelector("#" + CSS.escape(id(k))).value.trim();
     const c = { word: v("word"), article: v("article") || null, plural: v("plural") || null, type: v("type"), english: v("english"),
@@ -986,6 +988,7 @@ function editor(w, { onSave, onCancel, saveLabel, cancelLabel }) {
     if (!c.word || !c.english) { toast("A card needs at least the German word and its meaning."); return; }
     onSave(c);
   } },
+    w.draft && w.note ? h("p", { class: "tip full" }, h("b", {}, "Changed"), w.note) : null,
     dupe ? h("p", { class: "dupe full" }, "This word is already in your box.") : null,
     sel("article", "Article", [["", "none (not a noun)"], ["der", "der"], ["die", "die"], ["das", "das"]]),
     inp("word", "German word"),
@@ -1004,7 +1007,14 @@ function editor(w, { onSave, onCancel, saveLabel, cancelLabel }) {
 // ---------- add words ----------
 function buildPrompt(entries) {
   return `You write flashcards for a complete beginner (level A1) learning German. The learner reads English.
-For each entry below make one card. An entry may be German or English; if it is English, use the most common German word for it. Fix spelling mistakes in German entries.
+For each entry below make one card. An entry may be German, English or Russian; if it is English or Russian, use the most common German word for it.
+The learner may type a German word in any form. Always make the card for its dictionary form:
+- nouns: nominative singular with the correct article, whatever article or case was typed (dem Hund, des Hundes, die Hunde, den Hunden -> der Hund);
+- verbs: the infinitive (ging -> gehen, hast -> haben, suche -> suchen);
+- adjectives: the base form without endings (schöne, schönen, schöner -> schön);
+- articles and pronouns: the base form (eine, einen, einem -> ein; mich, mir -> ich);
+- fix spelling and capitalization.
+Feminine words for people (Lehrerin, Freundin) are words of their own: keep them as typed.
 Reply with only a JSON array, one object per entry, in the same order, with exactly these keys:
 - "word": the dictionary form without an article. Capitalize nouns.
 - "article": "der", "die" or "das" for nouns; null for everything else.
@@ -1014,8 +1024,9 @@ Reply with only a JSON array, one object per entry, in the same order, with exac
 - "example_de": one very easy present-tense sentence of 3-7 words that uses the word. Use only common beginner words.
 - "example_en": the English translation of that sentence.
 - "gap": the word exactly as it is spelled inside example_de (for verbs the conjugated form, for nouns only the noun without the article).
+- "note": if the card's word differs from the entry as typed (other form, case, article, spelling or language), one short English sentence saying what was changed and why, e.g. "You wrote 'Hunden' (dative plural); the dictionary form is der Hund." Otherwise null.
 - "tip": one short practical tip, at most 20 words: a gender rule if one applies (e.g. nouns ending in -ung are die), a memory hook, an irregular plural, or for verbs the ich/du/er forms if irregular.
-Example: [{"word":"Hund","article":"der","plural":"Hunde","type":"noun","english":"dog","example_de":"Der Hund ist groß.","example_en":"The dog is big.","gap":"Hund","tip":"Picture a big blue dog: der Hund."}]
+Example: [{"word":"Hund","article":"der","plural":"Hunde","type":"noun","english":"dog","example_de":"Der Hund ist groß.","example_en":"The dog is big.","gap":"Hund","note":null,"tip":"Picture a big blue dog: der Hund."}]
 
 Entries:
 ${entries.map((e, i) => (i + 1) + ". " + e).join("\n")}`;
@@ -1026,7 +1037,8 @@ function cleanCard(o) {
   const article = ["der", "die", "das"].includes(String(o.article || "").toLowerCase()) ? String(o.article).toLowerCase() : null;
   const type = TYPES.includes(o.type) ? o.type : (article ? "noun" : "other");
   return { word: str(o.word, 60), article, plural: article ? (str(o.plural, 60) || null) : null, type, english: str(o.english, 80),
-    example_de: str(o.example_de, 160), example_en: str(o.example_en, 160), gap: str(o.gap, 60), tip: str(o.tip, 200) };
+    example_de: str(o.example_de, 160), example_en: str(o.example_en, 160), gap: str(o.gap, 60), tip: str(o.tip, 200),
+    note: str(o.note, 200) || null };
 }
 const ERR = {
   rate_limited: "Too many requests right now. Wait a minute, then try again.",
@@ -1062,7 +1074,8 @@ async function makeCards() {
 async function saveDraft(d, c) {
   if (!ready()) return false;
   try {
-    await store.put({ ...c, id: d.id, progress: {}, added: Date.now() });
+    const { note, ...card } = c; // the note only explains the draft; it isn't stored
+    await store.put({ ...card, id: d.id, progress: {}, added: Date.now() });
     drafts = drafts.filter(x => x.id !== d.id);
     return true;
   } catch { toast("Couldn't save " + c.word + ". Try again."); return false; }
@@ -1081,7 +1094,7 @@ function renderAdd() {
       h("h2", {}, "Add words"),
       sampleOff
         ? h("p", { class: "note" }, "Claude can't write cards on this page right now (it may not be allowed for your account). You can still write cards yourself.")
-        : h("p", { class: "muted" }, "Type German words, one per line (up to 20). English works too: Claude finds the German word. Each card gets the article, plural, an easy sentence and a tip."),
+        : h("p", { class: "muted" }, "Type words one per line (up to 20), in German, English or Russian. Any form works (Hunden, ging, schöne): Claude saves the dictionary form and tells you what it changed. Each card gets the article, plural, an easy sentence and a tip. Words you add here go to My own words in Practice."),
       sampleOff ? null : ta,
       h("div", { class: "row" },
         sampleOff ? null : h("button", { class: "btn primary", type: "button", disabled: busy, onclick: makeCards }, busy ? "Writing cards…" : "Make cards"),
