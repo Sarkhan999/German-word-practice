@@ -4,7 +4,7 @@ Ideas for future improvements, most important first. Tick an item when it's done
 
 ## Now: small, high value
 
-- [ ] **Update README.md**
+- [x] **Update README.md**
   - Why: the README still describes the old box rules.
   - How: describe the newer features:
     - words become due from 4 am;
@@ -15,10 +15,10 @@ Ideas for future improvements, most important first. Tick an item when it's done
     - focus mode while practising;
     - "My own words";
     - dictionary forms and Russian input in the Add tab.
-- [ ] **Backup: export and import**
+- [x] **Backup: export and import**
   - Why: your words and progress live only in the artifact's database.
   - How: a "Download backup" button that saves all words with their progress as a JSON file, and "Load backup" to bring them back.
-- [ ] **Forgive small typos**
+- [x] **Forgive small typos**
   - Why: one wrong letter in "Kugelschreiber" shouldn't feel like not knowing the word.
   - How: in `checkType()`, treat an answer 1 letter off (Levenshtein distance 1) as "Almost". Show the right spelling and let the user choose "Count it as right" or "Count it as wrong".
 - [ ] **Edit a card while practising**
@@ -36,7 +36,7 @@ Ideas for future improvements, most important first. Tick an item when it's done
 - [ ] **Verb forms mode**
   - Why: knowing "gehen" isn't enough; you need "du gehst" and "er geht".
   - How: store a `forms` field (ich/du/er/wir) for verbs when the card is made, then ask for one form at a time.
-- [ ] **Reverse flashcards (English → German)**
+- [x] **Reverse flashcards (English → German)**
   - Why: Flashcards only go from German to English today, and speaking needs the other direction.
   - How: a new mode, or a switch in Flashcards, that shows the English and recalls the German with its article.
 - [ ] **Speak it (pronunciation)**
@@ -45,19 +45,19 @@ Ideas for future improvements, most important first. Tick an item when it's done
 
 ## Later: motivation and insight
 
-- [ ] **Daily goal and new-word limit**
+- [x] **Daily goal and new-word limit**
   - Why: starting a big lesson can flood the Due count.
   - How: a daily goal (e.g. 20 reviews) with a progress ring, and at most N new words per day (e.g. 5).
-- [ ] **Stats page**
+- [x] **Stats page**
   - Why: to see progress over weeks, not just today.
   - How: show reviews per day, accuracy per mode, a forecast of words due in the next 7 days, and your 10 hardest words.
-- [ ] **Daily reminder**
+- [x] **Daily reminder**
   - Why: the streak only counts if you remember to practise.
   - How: a scheduled message to your phone when words are due.
 - [ ] **More lessons (A2)**
   - Why: the built-in lessons stop at A1.
   - How: new lessons on work, health, shopping and travel, plus separable verbs (aufstehen, einkaufen) in `lessons.js`.
-- [ ] **Add to iPhone home screen**
+- [x] **Add to iPhone home screen**
   - Why: it should open full-screen like an app, with its own icon.
   - How: add a web app manifest and an icon.
 

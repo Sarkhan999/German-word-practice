@@ -1,6 +1,14 @@
 <title>Wortkiste</title>
 <meta charset="utf-8">
 <meta name="claude:viewport-fit-sides" content="cover">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Wortkiste">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#15171C">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
@@ -11,7 +19,7 @@
   --accent: #E3A900; --focus: #2457C5;
   --der: #2457C5; --die: #C2323A; --das: #157A47; --none: #5F6573;
   --der-bg: #E5ECFA; --die-bg: #FAE7E8; --das-bg: #E1F2E8; --none-bg: #EAEBEE;
-  --good: #157A47; --bad: #C2323A;
+  --good: #157A47; --bad: #C2323A; --almost: #8A5D00;
   --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
   --body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
@@ -20,14 +28,14 @@
   --accent: #F2B705; --focus: #8FB0F7;
   --der: #86A9F6; --die: #F28A8F; --das: #6CCF98; --none: #A3A9B6;
   --der-bg: #1C2741; --die-bg: #3A1D21; --das-bg: #16301F; --none-bg: #252830;
-  --good: #6CCF98; --bad: #F28A8F; color-scheme: dark;
+  --good: #6CCF98; --bad: #F28A8F; --almost: #F2B705; color-scheme: dark;
 } }
 :root[data-theme="dark"] {
   --bg: #121418; --surface: #1B1E24; --ink: #ECEDEF; --muted: #9CA2AE; --line: #2D313A;
   --accent: #F2B705; --focus: #8FB0F7;
   --der: #86A9F6; --die: #F28A8F; --das: #6CCF98; --none: #A3A9B6;
   --der-bg: #1C2741; --die-bg: #3A1D21; --das-bg: #16301F; --none-bg: #252830;
-  --good: #6CCF98; --bad: #F28A8F; color-scheme: dark;
+  --good: #6CCF98; --bad: #F28A8F; --almost: #F2B705; color-scheme: dark;
 }
 * { box-sizing: border-box; }
 body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.5; }
@@ -118,6 +126,7 @@ body.practising .card { padding: 18px; gap: 12px; }
 .fb { font-weight: 600; font-size: 1.05rem; }
 .fb.ok { color: var(--good); }
 .fb.no { color: var(--bad); }
+.fb.almost { color: var(--almost); }
 .answer-form { display: flex; flex-direction: column; gap: 10px; }
 .answer-form input[type="text"] { font: 500 1.3rem var(--body); padding: 10px 12px; }
 .keys { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -211,6 +220,40 @@ tr + tr td { border-top: 1px solid var(--line); }
 .sound { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; }
 .sound b { font-family: var(--display); font-size: 1.3rem; margin-right: 6px; }
 
+.today { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; align-items: center;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.today .ring { grid-row: span 2; display: flex; }
+.today .ttext { display: flex; flex-direction: column; min-width: 0; }
+.today .ttext strong { font: 700 1.25rem var(--display); }
+.tsets { display: flex; flex-wrap: wrap; gap: 6px 14px; grid-column: 1 / -1; }
+.today .ring + .ttext + .tsets { grid-column: 2; }
+.tset { display: inline-flex; align-items: center; gap: 6px; font-size: .85rem; color: var(--muted); }
+.tset select { width: auto; padding: 3px 6px; font-size: .9rem; }
+.scard { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.scard h3 { font-size: 1.35rem; font-weight: 700; }
+.scard .tablewrap { border: 0; border-radius: 0; }
+.chart { margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.bars { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; height: 130px; align-items: end;
+  border-bottom: 1px solid var(--line); }
+.bcol { height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 2px; outline-offset: 1px; }
+.bcol i { display: block; width: min(100%, 22px); background: var(--accent); border-radius: 4px 4px 0 0; min-height: 0; }
+.bcol i.zero { height: 0 !important; }
+.bcol:hover i, .bcol:focus-visible i { background: var(--ink); }
+.bval { font-size: .75rem; color: var(--muted); font-variant-numeric: tabular-nums; min-height: 1.1em; line-height: 1.1; }
+.baxis { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; }
+.baxis span { font-size: .7rem; color: var(--muted); text-align: center; white-space: nowrap; overflow: visible; }
+td.num, .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.acc { display: inline-flex; align-items: center; gap: 8px; }
+.abar { width: 60px; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; display: inline-block; }
+.abar i { display: block; height: 100%; background: var(--good); }
+.hardlist { margin: 0; padding-left: 1.4em; display: flex; flex-direction: column; gap: 6px; }
+.hardlist li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: baseline; }
+.hardlist li span.muted { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#backup { margin-top: 10px; }
+.confirm { display: flex; flex-direction: column; gap: 8px; color: var(--ink); }
+label.btn { cursor: pointer; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
 #toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px));
   background: var(--ink); color: var(--bg); padding: 9px 16px; border-radius: 10px; font-weight: 500; max-width: calc(100% - 32px); z-index: 20; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
@@ -239,6 +282,7 @@ tr + tr td { border-top: 1px solid var(--line); }
     <button type="button" role="tab" data-tab="practice" aria-selected="true">Practice</button>
     <button type="button" role="tab" data-tab="lessons" aria-selected="false">Lessons</button>
     <button type="button" role="tab" data-tab="words" aria-selected="false">Words</button>
+    <button type="button" role="tab" data-tab="stats" aria-selected="false">Stats</button>
     <button type="button" role="tab" data-tab="add" aria-selected="false">Add</button>
     <button type="button" role="tab" data-tab="rules" aria-selected="false">Tips</button>
   </nav>
@@ -255,7 +299,10 @@ tr + tr td { border-top: 1px solid var(--line); }
         <div class="selects" id="wselects"></div>
       </div>
       <div id="wlist"></div>
+      <div id="backup"></div>
     </section>
+
+    <section id="view-stats" class="panel" hidden></section>
 
     <section id="view-add" class="panel" hidden></section>
 
@@ -284,6 +331,14 @@ tr + tr td { border-top: 1px solid var(--line); }
           <li>Ten new words a day plus a daily review beats fifty words once a week. Practise when the Due counter is above zero.</li>
           <li>Say every word out loud. Use the Listen button and copy the sound.</li>
           <li>No umlaut keys? Type ae, oe, ue and ss. The trainer accepts both.</li>
+        </ul>
+      </section>
+      <section>
+        <h3>Put Wortkiste on your iPhone home screen</h3>
+        <ul>
+          <li>Open this page in Safari, signed in to claude.ai.</li>
+          <li>Tap the Share button (the square with an arrow), then <b>Add to Home Screen</b>, then <b>Add</b>.</li>
+          <li>Wortkiste now opens from its own icon, straight to your words. Your progress is the same as on every other device.</li>
         </ul>
       </section>
       <section>
@@ -326,13 +381,14 @@ function dueAfter(days) {
 const DAY = 864e5;
 const MODES = [
   { id: "cards", name: "Flashcards", desc: "See the German word. Recall its article and meaning, then check." },
+  { id: "reverse", name: "English → German", desc: "See the English. Say the German word with its article, then check." },
   { id: "article", name: "der / die / das", desc: "Pick the right article for each noun. Keys 1, 2, 3 work too." },
   { id: "listen", name: "Listen", desc: "Hear a German word and type what you hear." },
   { id: "type", name: "Type it", desc: "See the English meaning and type the German, with the article." },
   { id: "gap", name: "Fill the gap", desc: "Complete an easy sentence with the missing word." },
 ];
 const LESSONS = (window.LESSONS || []).map((l, i) => ({ ...l, n: i + 1 }));
-const TABS = ["practice", "lessons", "words", "add", "rules"];
+const TABS = ["practice", "lessons", "words", "stats", "add", "rules"];
 
 let words = [], meta = { streak: 0, lastDay: "" }, store = null, loaded = false;
 let tab = "practice", session = null, openId = null, editId = null, filter = "all", query = "", openLesson = null;
@@ -341,6 +397,7 @@ let practiceSet = "all";
 try { practiceSet = localStorage.getItem("wk.set") || "all"; } catch {}
 let drafts = [], addText = "", addStatus = "", busy = false, ctl = null, sampleOff = false;
 const sampleP = window.claude ? window.claude.use("sample").catch(() => null) : Promise.resolve(null);
+const downloadsP = window.claude ? window.claude.use("downloads").catch(() => null) : Promise.resolve(null);
 
 function h(tag, attrs, ...kids) {
   const el = document.createElement(tag);
@@ -356,7 +413,7 @@ function h(tag, attrs, ...kids) {
 }
 const gclass = w => "g-" + (w.article || "none");
 const label = w => (w.article ? w.article + " " : "") + w.word;
-const MODE_IDS = ["cards", "article", "listen", "type", "gap"];
+const MODE_IDS = ["cards", "reverse", "article", "listen", "type", "gap"];
 // Each practice mode keeps its own box per word: knowing a flashcard doesn't mean you can type it.
 function prog(w, m) {
   const p = w.progress && w.progress[m];
@@ -367,7 +424,7 @@ function prog(w, m) {
 const appliesTo = (w, m) => m === "article" ? !!w.article : m === "gap" ? !!gapParts(w) : m === "listen" ? canSpeak : true;
 const isDueIn = (w, m) => (prog(w, m).due || 0) <= Date.now();
 const weakest = w => Math.min(...MODE_IDS.filter(m => appliesTo(w, m)).map(m => prog(w, m).box || 1));
-const dueCount = () => activeWords().reduce((n, w) => n + MODE_IDS.filter(m => appliesTo(w, m) && unlocked(w, m) && isDueIn(w, m)).length, 0);
+const dueCount = () => activeWords().reduce((n, w) => n + (held().has(w.id) ? 0 : MODE_IDS.filter(m => appliesTo(w, m) && unlocked(w, m) && isDueIn(w, m)).length), 0);
 const newId = () => "w" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const shuffle = a => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const norm = s => String(s || "").toLowerCase().normalize("NFC").replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue")
@@ -380,7 +437,7 @@ function gapParts(w) {
   return i < 0 ? null : [s.slice(0, i), s.slice(i, i + g.length), s.slice(i + g.length)];
 }
 // Recall modes open for a word once it reaches box 2 in Flashcards, and stay open after the first try.
-const LOCKED_UNTIL_CARDS = ["listen", "type", "gap"];
+const LOCKED_UNTIL_CARDS = ["reverse", "listen", "type", "gap"];
 const unlocked = (w, m) => !LOCKED_UNTIL_CARDS.includes(m) || prog(w, "cards").box >= 2 || prog(w, m).seen > 0;
 const applicable = mode => setWords().filter(w => appliesTo(w, mode));
 const wkey = (word, article) => norm(word) + "|" + (article || "");
@@ -417,7 +474,75 @@ function setWords() {
   const keys = new Set(l.words.map(t => wkey(t[0], t[1])));
   return words.filter(w => keys.has(wkey(w.word, w.article)));
 }
-function eligible(mode) { return applicable(mode).filter(w => unlocked(w, mode)); }
+function eligible(mode) { return applicable(mode).filter(w => unlocked(w, mode) && !held().has(w.id)); }
+
+// ---------- daily goal & new-word limit ----------
+// Days for the goal, the new-word limit and the stats start at 4 am, like due dates.
+const practiceDay = (t = Date.now()) => dayKey(new Date(t - DAY_STARTS * 36e5));
+const GOAL_DEFAULT = 20, NEW_DEFAULT = 10;
+const goalOf = () => meta.goal == null ? GOAL_DEFAULT : meta.goal;          // reviews a day; 0 = no goal
+const newLimitOf = () => meta.newLimit == null ? NEW_DEFAULT : meta.newLimit; // new words a day; 0 = no limit
+const todayLog = () => (meta.days || {})[practiceDay()] || { r: 0, ok: 0, n: 0 };
+const isNew = w => !MODE_IDS.some(m => prog(w, m).seen);
+// New words over today's limit are held back: they stay out of rounds and the Due count until a later day.
+// The oldest new words (by when they were added) go first.
+let heldSet = null;
+function held() {
+  if (heldSet) return heldSet;
+  const lim = newLimitOf();
+  if (!lim) return heldSet = new Set();
+  const left = Math.max(0, lim - (todayLog().n || 0));
+  const fresh = activeWords().filter(isNew).sort((a, b) => (a.added || 0) - (b.added || 0) || String(a.id).localeCompare(String(b.id)));
+  return heldSet = new Set(fresh.slice(left).map(w => w.id));
+}
+// Each graded answer goes into today's log: reviews, right answers and new words started.
+// The streak is updated in the same save.
+async function recordAnswer(ok, wasNew) {
+  const d = practiceDay(), days = { ...(meta.days || {}) };
+  const t = { r: 0, ok: 0, n: 0, ...(days[d] || {}) };
+  t.r++; if (ok) t.ok++; if (wasNew) t.n++;
+  days[d] = t;
+  const keep = practiceDay(Date.now() - 180 * DAY);
+  for (const k of Object.keys(days)) if (k < keep) delete days[k];
+  const c = dayKey(), y = dayKey(new Date(Date.now() - DAY));
+  const streak = meta.lastDay === c ? meta.streak || 1 : meta.lastDay === y ? (meta.streak || 0) + 1 : 1;
+  meta = { ...meta, days, streak, lastDay: c };
+  heldSet = null;
+  renderStats();
+  try { await store.setMeta(meta); } catch {}
+}
+async function saveSettings(f) {
+  if (!ready()) return;
+  meta = { ...meta, ...f }; heldSet = null;
+  renderStats(); renderPractice();
+  try { await store.setMeta(meta); } catch { toast("Couldn't save. Try again."); }
+}
+function goalRing(done, goal) {
+  const r = 22, c = 2 * Math.PI * r, f = goal ? Math.min(1, done / goal) : 0;
+  const svg = `<svg viewBox="0 0 56 56" width="56" height="56" aria-hidden="true"><circle cx="28" cy="28" r="${r}" fill="none" stroke="var(--line)" stroke-width="6"/>`
+    + (f > 0 ? `<circle cx="28" cy="28" r="${r}" fill="none" stroke="${f >= 1 ? "var(--good)" : "var(--accent)"}" stroke-width="6" stroke-linecap="round"`
+    + ` stroke-dasharray="${(c * f).toFixed(2)} ${c.toFixed(2)}" transform="rotate(-90 28 28)"/>` : "") + `</svg>`;
+  const el = h("div", { class: "ring" });
+  el.innerHTML = svg;
+  return el;
+}
+function todayPanel() {
+  const t = todayLog(), goal = goalOf(), lim = newLimitOf(), heldN = held().size;
+  const sel = (id, lab, value, opts, key) => {
+    const s = h("select", { id, onchange: e => saveSettings({ [key]: Number(e.target.value) }) },
+      opts.map(([v, txt]) => h("option", { value: String(v) }, txt)));
+    s.value = String(value);
+    return h("label", { class: "tset", for: id }, lab, s);
+  };
+  const headline = goal ? (t.r >= goal ? "Goal reached: " + t.r + " reviews today" : t.r + " of " + goal + " reviews today") : t.r + " reviews today";
+  const sub = lim ? (t.n || 0) + " of " + lim + " new words started" + (heldN ? " · " + heldN + " new words wait for later days" : "") : (t.n || 0) + " new words started";
+  return h("div", { class: "today" },
+    goal ? goalRing(t.r, goal) : null,
+    h("div", { class: "ttext" }, h("strong", {}, headline), h("span", { class: "muted small" }, sub)),
+    h("div", { class: "tsets" },
+      sel("goal-set", "Daily goal", goal, [[0, "None"], [10, "10"], [20, "20"], [30, "30"], [50, "50"], [100, "100"]], "goal"),
+      sel("new-set", "New words a day", lim, [[3, "3"], [5, "5"], [10, "10"], [15, "15"], [20, "20"], [0, "No limit"]], "newLimit")));
+}
 let toastT;
 function toast(m) { const t = $("#toast"); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3500); }
 function note(m) { const n = $("#note"); n.textContent = m || ""; n.hidden = !m; }
@@ -522,10 +647,12 @@ function localStore() {
   onData();
 }
 function onData() {
+  heldSet = null;
   renderStats();
   if (tab === "words" && !editId) renderWordList();
   if (tab === "practice" && !session) renderPractice();
   if (tab === "lessons") renderLessons();
+  if (tab === "stats") renderStatsTab();
 }
 
 // ---------- lessons ----------
@@ -596,6 +723,7 @@ async function togglePause(l) {
   if (!ready()) return;
   const was = lessonPaused(l.id);
   meta = { ...meta, paused: was ? (meta.paused || []).filter(x => x !== l.id) : [...(meta.paused || []), l.id] };
+  heldSet = null;
   if (!was && practiceSet === l.id) { practiceSet = "all"; savePracticeSet(); }
   renderLessons(); renderStats();
   toast(was ? "Lesson " + l.n + " is back in practice, with your progress." : "Lesson " + l.n + " paused. Your progress is kept.");
@@ -611,17 +739,6 @@ function renderStats() {
   const y = dayKey(new Date(Date.now() - DAY));
   $("#s-streak").textContent = (meta.lastDay === dayKey() || meta.lastDay === y) ? (meta.streak || 0) : 0;
 }
-let streakBusy = false;
-async function bumpStreak() {
-  const t = dayKey();
-  if (meta.lastDay === t || streakBusy) return;
-  const y = dayKey(new Date(Date.now() - DAY));
-  meta = { ...meta, streak: meta.lastDay === y ? (meta.streak || 0) + 1 : 1, lastDay: t };
-  renderStats();
-  streakBusy = true;
-  try { await store.setMeta(meta); } catch {}
-  streakBusy = false;
-}
 function setTab(t) {
   tab = t;
   try { localStorage.setItem("wk.tab", t); } catch {}
@@ -631,6 +748,7 @@ function setTab(t) {
   if (t === "practice") renderPractice();
   if (t === "lessons") renderLessons();
   if (t === "words") renderWords();
+  if (t === "stats") renderStatsTab();
   if (t === "add") renderAdd();
 }
 document.querySelectorAll("nav.tabs button").forEach(b => b.addEventListener("click", () => setTab(b.dataset.tab)));
@@ -674,6 +792,7 @@ function renderPractice() {
   sayBox.checked = sayOn;
   const cardBox = h("input", { type: "checkbox", id: "saycard-toggle", onchange: e => { sayCardOn = e.target.checked; try { localStorage.setItem("wk.sayCard", sayCardOn ? "1" : "0"); } catch {} } });
   cardBox.checked = sayCardOn;
+  el.append(todayPanel());
   el.append(h("div", { class: "setpick" }, h("label", { for: "practice-set" }, "Practise"), pick,
     canSpeak ? h("label", { class: "saytoggle", for: "saycard-toggle" }, cardBox, "Say each card") : null,
     canSpeak ? h("label", { class: "saytoggle", for: "say-toggle" }, sayBox, "Speak answers") : null));
@@ -683,6 +802,7 @@ function renderPractice() {
     const mastered = all.filter(w => prog(w, m.id).box >= 5).length, locked = all.length - pool.length;
     const pill = !all.length ? (m.id === "listen" && !canSpeak ? "This browser can't speak German"
         : practiceSet === "hard" ? "No hard words here" : practiceSet === "own" ? "No own words here" : m.id === "article" ? "No nouns here" : m.id === "gap" ? "No example sentences yet" : "Nothing to practise")
+      : !pool.length && all.some(w => held().has(w.id)) && !all.some(w => !held().has(w.id) && unlocked(w, m.id)) ? "New-word limit reached · more tomorrow"
       : !pool.length ? "Locked: get words to box 2 in Flashcards"
       : due ? due + " due now" : "All done · next " + whenText(Math.min(...pool.map(w => prog(w, m.id).due || 0)));
     grid.append(h("button", { class: "mode" + (pool.length && !due ? " rest" : ""), type: "button", disabled: !pool.length, onclick: () => startSession(m.id) },
@@ -692,7 +812,7 @@ function renderPractice() {
         all.length ? h("span", { class: "muted small" }, mastered + " / " + all.length + " mastered" + (locked && pool.length ? " · " + locked + " locked" : "")) : null)));
   }
   el.append(grid, h("p", { class: "muted small" },
-    "Rounds only show words that are due. A word in box 1 comes back right away, box 2 after 1 day, box 3 after 3 days, box 4 after 7 days and box 5 after 14 days. Words become due at the start of the day (from 4 am), not at the minute you answered them. Every further right answer in box 5 stretches the gap to 30, 60 and then 120 days. When nothing is due, you can still do an extra round, but it doesn't change your boxes. Words you miss come back once at the end of the same round for another try; that retry doesn't change their box. Each mode tracks its own progress. A right answer moves the word up one box (1 → 5) in that mode only, so you see it less often there. A wrong answer moves it down two boxes in that mode (box 5 → 3, box 4 → 2, box 3 or 2 → 1). A word counts as mastered when it reaches box 5 in every mode that applies to it. Listen, Type it and Fill the gap open for a word once it reaches box 2 in Flashcards, so you only write words you already recognise. Hard words are the ones you got wrong last time or get right less than 60% of the time."));
+    "Rounds only show words that are due. A word in box 1 comes back right away, box 2 after 1 day, box 3 after 3 days, box 4 after 7 days and box 5 after 14 days. Words become due at the start of the day (from 4 am), not at the minute you answered them. Every further right answer in box 5 stretches the gap to 30, 60 and then 120 days. When nothing is due, you can still do an extra round, but it doesn't change your boxes. Words you miss come back once at the end of the same round for another try; that retry doesn't change their box. Each mode tracks its own progress. A right answer moves the word up one box (1 → 5) in that mode only, so you see it less often there. A wrong answer moves it down two boxes in that mode (box 5 → 3, box 4 → 2, box 3 or 2 → 1). A word counts as mastered when it reaches box 5 in every mode that applies to it. English → German, Listen, Type it and Fill the gap open for a word once it reaches box 2 in Flashcards, so you only recall and write words you already recognise. New words are limited per day (you choose how many above), so a big lesson doesn't flood your Due count: the oldest new words come first, the rest wait for later days. In typed answers, one wrong letter in a longer word counts as “Almost”: you see the right spelling and choose whether it counts as right or wrong. Hard words are the ones you got wrong last time or get right less than 60% of the time."));
 }
 // A normal round holds only words that are due. With nothing due, an extra round reviews everything but saves no boxes,
 // so reviewing early can't push a word ahead of its schedule.
@@ -705,11 +825,11 @@ function startSession(mode) {
   renderSession();
 }
 function endSession() { session = null; document.body.classList.remove("practising"); renderPractice(); }
-function next() { session.i++; session.state = "ask"; session.revealed = false; session.fb = null; session.picked = null; session.played = false; renderSession(); }
+function next() { session.i++; session.state = "ask"; session.almost = false; session.revealed = false; session.fb = null; session.picked = null; session.played = false; renderSession(); }
 function answer(w, ok) {
   if (session.state !== "ask") return;
   session.state = "done";
-  if (session.mode !== "cards") sayAnswer(w); // Flashcards speaks when the answer is shown
+  if (session.mode !== "cards" && session.mode !== "reverse") sayAnswer(w); // the flashcard modes speak when the answer is shown
   // A missed word comes back once at the end of this round. The retry is practice only: its box was set by the first answer.
   if (w.retry) return;
   if (ok) session.right++;
@@ -718,7 +838,8 @@ function answer(w, ok) {
   grade(w, ok, session.mode);
 }
 async function grade(w, ok, mode) {
-  const p = prog(words.find(x => x.id === w.id) || w, mode);
+  const stored = words.find(x => x.id === w.id) || w;
+  const p = prog(stored, mode), wasNew = isNew(stored);
   const was = p.box || 1;
   // Right: up one box. Wrong: down two boxes (never below 1), so one slip on a well-known word isn't a full reset.
   const box = ok ? Math.min(5, was + 1) : Math.max(1, was - 2);
@@ -727,8 +848,8 @@ async function grade(w, ok, mode) {
     : LONG_DAYS[Math.min(LONG_DAYS.length - 1, LONG_DAYS.indexOf(p.ivl || LONG_DAYS[0]) + 1)];
   const f = { box, due: dueAfter(days), seen: (p.seen || 0) + 1, right: (p.right || 0) + (ok ? 1 : 0), last: ok ? 1 : 0 };
   if (box === 5) f.ivl = days;
+  recordAnswer(ok, wasNew);
   try { await store.patch(w.id, { progress: { [mode]: f } }); } catch { toast("Couldn't save your progress. Check your connection."); }
-  bumpStreak();
 }
 function renderSession() {
   const el = $("#view-practice"), s = session, total = s.items.length;
@@ -740,7 +861,7 @@ function renderSession() {
     h("div", { class: "prog" }, h("i", { style: "width:" + (s.i / total * 100) + "%" })),
     h("button", { class: "btn ghost sm", type: "button", onclick: endSession }, s.i >= total ? "Close" : "✕ End")));
   if (s.i >= total) { el.append(summary()); focusIn(el); return; }
-  el.append({ cards: cardFlash, article: cardArticle, listen: cardListen, type: cardType, gap: cardGap }[s.mode](w));
+  el.append({ cards: cardFlash, reverse: cardReverse, article: cardArticle, listen: cardListen, type: cardType, gap: cardGap }[s.mode](w));
   focusIn(el);
   if (s.state === "ask" && !s.played) { s.played = true; sayCard(w, s.mode); }
 }
@@ -767,6 +888,20 @@ function cardFlash(w) {
   }
   return c;
 }
+// English → German: see the meaning, recall the German word with its article, then check yourself.
+function cardReverse(w) {
+  const c = h("div", { class: "card" }, h("span", { class: "kicker" }, (w.type || "word") + (w.article ? " · with der, die or das" : "")),
+    h("div", { class: "big en" }, w.english || ""));
+  if (!session.revealed) {
+    c.append(h("p", { class: "muted" }, w.article ? "Say the German word with its article, out loud." : "Say the German word, out loud."),
+      h("div", { class: "row" }, h("button", { class: "btn primary", type: "button", "data-focus": true, onclick: () => { session.revealed = true; sayAnswer(w); renderSession(); } }, "Show answer")));
+  } else {
+    c.append(details(w), h("div", { class: "row" },
+      h("button", { class: "btn bad", type: "button", onclick: () => { answer(w, false); next(); } }, "Again"),
+      h("button", { class: "btn good", type: "button", "data-focus": true, onclick: () => { answer(w, true); next(); } }, "Knew it")));
+  }
+  return c;
+}
 function cardArticle(w) {
   const done = session.state === "done";
   const pick = a => { session.picked = a; answer(w, a === w.article); renderSession(); };
@@ -783,9 +918,26 @@ function cardArticle(w) {
   }
   return c;
 }
+// True when a and b differ by exactly one letter: one added, missing, changed, or two neighbours swapped.
+function oneOff(a, b) {
+  if (a === b || Math.abs(a.length - b.length) > 1) return false;
+  let i = 0;
+  while (i < a.length && a[i] === b[i]) i++;
+  if (a.length === b.length) {
+    if (a.slice(i + 1) === b.slice(i + 1)) return true;
+    return a[i] === b[i + 1] && a[i + 1] === b[i] && a.slice(i + 2) === b.slice(i + 2);
+  }
+  return a.length > b.length ? a.slice(i + 1) === b.slice(i) : a.slice(i) === b.slice(i + 1);
+}
+// A small slip in a longer word is "Almost": the learner sees the right spelling and decides how it counts.
+const almostSame = (given, exp) => norm(exp).length >= 4 && oneOff(norm(given), norm(exp));
 function checkType(w, given) {
   const g = norm(given), exp = label(w);
   if (g === norm(exp)) return { ok: true, msg: "Richtig!" };
+  if (w.article) {
+    const m = g.match(/^(der|die|das) (.+)$/);
+    if (m && m[1] === w.article && almostSame(m[2], w.word)) return { almost: true, msg: "Almost! Check the spelling: " + exp + "." };
+  } else if (almostSame(g, w.word)) return { almost: true, msg: "Almost! Check the spelling: " + exp + "." };
   if (w.article) {
     if (g === norm(w.word)) return { ok: false, msg: "Right word, but add the article: " + exp + "." };
     const m = g.match(/^(der|die|das) (.+)$/);
@@ -816,11 +968,24 @@ function typedForm(w, input, body, check, giveUp, after) {
   const form = h("form", { class: "answer-form", onsubmit: e => {
     e.preventDefault();
     if (session.state === "done") { next(); return; }
-    if (!input.value.trim()) return;
+    if (session.almost || !input.value.trim()) return;
     finish({ ...check(input.value), given: input.value });
   } }, body, keys, actions, result);
   function finish(fb) {
     if (session.state !== "ask") return;
+    if (fb.almost) {
+      // One letter off: show the right spelling and let the learner choose how it counts.
+      session.almost = true;
+      keys.hidden = true;
+      const right = session.mode === "gap" ? gapParts(w)[1] : label(w);
+      const decide = ok => { session.almost = false; finish({ ...fb, almost: false, ok, msg: ok ? "Counted as right. Watch the spelling: " + right + "." : "Counted as wrong. It's " + right + "." }); };
+      actions.replaceChildren(h("p", { class: "fb almost" }, fb.msg),
+        h("div", { class: "row" },
+          h("button", { class: "btn good", type: "button", onpointerdown: keepFocus, onclick: () => decide(true) }, "Count it as right"),
+          h("button", { class: "btn bad", type: "button", onpointerdown: keepFocus, onclick: () => decide(false) }, "Count it as wrong")));
+      input.focus({ preventScroll: true });
+      return;
+    }
     session.fb = fb;
     answer(w, fb.ok);
     input.classList.add(fb.ok ? "is-ok" : "is-no");
@@ -852,7 +1017,9 @@ function cardGap(w) {
   const [before, gap, after] = gapParts(w), input = answerInput("gap-input");
   return h("div", { class: "card" }, h("span", { class: "kicker" }, "Fill the gap · " + (w.english || "")),
     typedForm(w, input, [h("p", { class: "gapline", lang: "de" }, before, input, after), h("p", { class: "muted" }, w.example_en || "")],
-      given => { const ok = norm(given) === norm(gap); return { ok, msg: ok ? "Richtig!" : "Not quite. The missing word is " + gap + "." }; },
+      given => { const ok = norm(given) === norm(gap);
+        if (!ok && almostSame(given, gap)) return { almost: true, msg: "Almost! Check the spelling: " + gap + "." };
+        return { ok, msg: ok ? "Richtig!" : "Not quite. The missing word is " + gap + "." }; },
       () => ({ ok: false, given: "", msg: "The missing word is " + gap + "." }),
       () => session.fb.ok ? null : h("p", { class: "gapline " + gclass(w), lang: "de" }, before, h("mark", {}, gap), after)));
 }
@@ -873,12 +1040,165 @@ document.addEventListener("keydown", e => {
   if (a) { e.preventDefault(); const w = session.items[session.i]; session.picked = a; answer(w, a === w.article); renderSession(); }
 });
 
+// ---------- stats ----------
+const shortDay = k => { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }); };
+// Single-series bar chart in plain HTML: thin bars from a shared baseline, a label on the bars that matter,
+// and a tooltip on every bar (hover, or tap and hold on a phone).
+function barChart(rows, { name, unit, tip }) {
+  const max = Math.max(1, ...rows.map(r => r.v));
+  return h("figure", { class: "chart", "aria-label": name },
+    h("div", { class: "bars", role: "list" }, rows.map(r =>
+      h("div", { class: "bcol", role: "listitem", title: tip ? tip(r) : r.label + ": " + r.v + " " + unit, "aria-label": tip ? tip(r) : r.label + ": " + r.v + " " + unit, tabindex: "0" },
+        h("span", { class: "bval" }, r.show ? String(r.v) : ""),
+        h("i", { class: r.v ? null : "zero", style: "height:" + (r.v / max * 100) + "%" })))),
+    h("div", { class: "baxis" }, rows.map(r => h("span", {}, r.tick || ""))));
+}
+function forecast() {
+  const out = [];
+  for (let i = 0; i < 7; i++) {
+    const from = i ? dueAfter(i) : -Infinity, to = dueAfter(i + 1);
+    let n = 0;
+    for (const w of activeWords()) {
+      if (held().has(w.id)) continue;
+      for (const m of MODE_IDS) {
+        if (!appliesTo(w, m) || !unlocked(w, m)) continue;
+        const d = prog(w, m).due || 0;
+        if (d >= from && d < to) n++;
+      }
+    }
+    out.push(n);
+  }
+  return out;
+}
+function renderStatsTab() {
+  const el = $("#view-stats");
+  if (!words.length) { el.replaceChildren(loaded ? emptyState() : h("p", { class: "note" }, "Loading your words…")); return; }
+  const days = meta.days || {}, keys = [];
+  for (let i = 13; i >= 0; i--) keys.push(practiceDay(Date.now() - i * DAY));
+  const rows = keys.map((k, i) => { const d = days[k] || {}; return { k, v: d.r || 0, ok: d.ok || 0, label: shortDay(k), tick: i === 13 ? "Today" : i % 2 ? "" : shortDay(k).split(" ").slice(1).join(" ") }; });
+  const peak = Math.max(...rows.map(r => r.v));
+  rows.forEach((r, i) => r.show = r.v > 0 && (i === 13 || r.v === peak));
+  const week = rows.slice(7), wr = week.reduce((n, r) => n + r.v, 0), wok = week.reduce((n, r) => n + r.ok, 0);
+  const activeDays = rows.filter(r => r.v).length;
+  const fc = forecast();
+  const fRows = fc.map((v, i) => ({ v, show: v > 0, label: i === 0 ? "Today (due now and later today)" : i === 1 ? "Tomorrow" : shortDay(practiceDay(dueAfter(i))),
+    tick: i === 0 ? "Today" : i === 1 ? "Tmrw" : shortDay(practiceDay(dueAfter(i))).split(" ")[0] }));
+  const modeRows = MODES.map(m => {
+    const all = words.filter(w => appliesTo(w, m.id));
+    let seen = 0, right = 0;
+    for (const w of all) { const p = prog(w, m.id); seen += p.seen || 0; right += p.right || 0; }
+    return { m, seen, right, mastered: all.filter(w => prog(w, m.id).box >= 5).length, total: all.length };
+  });
+  const hardest = words.map(w => {
+    let seen = 0, right = 0;
+    for (const m of MODE_IDS) { const p = prog(w, m); seen += p.seen || 0; right += p.right || 0; }
+    return { w, seen, right };
+  }).filter(x => x.seen >= 2 && x.right < x.seen).sort((a, b) => a.right / a.seen - b.right / b.seen || b.seen - a.seen).slice(0, 10);
+  el.replaceChildren(
+    h("div", { class: "scard" }, h("h3", {}, "Reviews per day"),
+      h("p", { class: "muted small" }, "Last 7 days: " + wr + " reviews" + (wr ? ", " + Math.round(wok / wr * 100) + "% right" : "") + " · practised on " + activeDays + " of the last 14 days. Extra rounds and retries aren't counted."),
+      barChart(rows, { name: "Reviews per day, last 14 days", unit: "reviews", tip: r => r.label + ": " + r.v + " reviews" + (r.v ? ", " + Math.round(r.ok / r.v * 100) + "% right" : "") })),
+    h("div", { class: "scard" }, h("h3", {}, "Coming up"),
+      h("p", { class: "muted small" }, "Reviews due on each of the next 7 days, if you clear every day. Today includes everything already due."),
+      barChart(fRows, { name: "Reviews due in the next 7 days", unit: "due" })),
+    h("div", { class: "scard" }, h("h3", {}, "Accuracy by mode"),
+      h("div", { class: "tablewrap" }, h("table", {},
+        h("tr", {}, h("th", {}, "Mode"), h("th", {}, "Answers"), h("th", {}, "Right"), h("th", {}, "Mastered")),
+        modeRows.map(r => h("tr", {}, h("td", {}, r.m.name), h("td", { class: "num" }, String(r.seen)),
+          h("td", { class: "num" }, r.seen ? h("span", { class: "acc" }, h("span", { class: "abar" }, h("i", { style: "width:" + (r.right / r.seen * 100) + "%" })), Math.round(r.right / r.seen * 100) + "%") : "–"),
+          h("td", { class: "num" }, r.mastered + " / " + r.total)))))),
+    h("div", { class: "scard" }, h("h3", {}, "Your 10 hardest words"),
+      hardest.length ? h("ol", { class: "hardlist" }, hardest.map(({ w, seen, right }) =>
+        h("li", { class: gclass(w) }, h("strong", { class: "gword" }, label(w)), h("span", { class: "muted" }, w.english || ""),
+          h("span", { class: "small num" }, right + " / " + seen + " right")))) : h("p", { class: "muted" }, "No misses yet. Words you get wrong show up here."),
+      hardest.length ? h("div", { class: "row" }, h("button", { class: "btn sm", type: "button", onclick: () => { practiceSet = "hard"; savePracticeSet(); setTab("practice"); } }, "Practise hard words")) : null));
+}
+
+// ---------- backup ----------
+let pendingBackup = null;
+function backupData() {
+  const { draft, ...m } = meta;
+  return { app: "wortkiste", version: 1, exported: new Date().toISOString(), meta: m, words: words.map(({ draft, ...w }) => w) };
+}
+async function downloadBackup(btn) {
+  const text = JSON.stringify(backupData(), null, 1), name = "wortkiste-backup-" + dayKey() + ".json";
+  const dl = await downloadsP;
+  if (dl) {
+    btn.disabled = true;
+    try { await dl.save({ filename: name, data: text }); toast("Backup saved: " + words.length + " words."); }
+    catch (e) { if (e && e.code !== "declined") { toast("Couldn't save the file here. Use Copy backup instead."); } }
+    finally { btn.disabled = false; }
+    return;
+  }
+  try { await navigator.clipboard.writeText(text); toast("Backup copied. Paste it into a note or a file to keep it."); }
+  catch { toast("Couldn't copy the backup in this browser."); }
+}
+function readBackup(file) {
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const b = JSON.parse(String(r.result));
+      if (!b || b.app !== "wortkiste" || !Array.isArray(b.words)) throw 0;
+      const list = b.words.filter(w => w && typeof w === "object" && w.word && w.id);
+      const have = new Set(words.map(w => w.id));
+      pendingBackup = { b, list, update: list.filter(w => have.has(w.id)).length };
+    } catch { pendingBackup = null; toast("That file isn't a Wortkiste backup."); }
+    renderBackup();
+  };
+  r.readAsText(file);
+}
+async function loadBackup(btn) {
+  if (!ready() || !pendingBackup) return;
+  btn.disabled = true;
+  const { b, list } = pendingBackup;
+  let n = 0;
+  try {
+    for (const w of list) { await store.put(w); n++; }
+    const bm = b.meta || {}, days = { ...(bm.days || {}) };
+    for (const [k, v] of Object.entries(meta.days || {})) {
+      const o = days[k];
+      days[k] = !o ? v : { r: Math.max(o.r || 0, v.r || 0), ok: Math.max(o.ok || 0, v.ok || 0), n: Math.max(o.n || 0, v.n || 0) };
+    }
+    const newer = (bm.lastDay || "") > (meta.lastDay || "");
+    meta = { ...bm, ...meta, days, paused: [...new Set([...(meta.paused || []), ...(bm.paused || [])])],
+      streak: newer ? bm.streak : meta.streak, lastDay: newer ? bm.lastDay : meta.lastDay };
+    heldSet = null;
+    await store.setMeta(meta);
+    toast("Loaded " + n + " words from the backup.");
+    pendingBackup = null;
+  } catch { toast("Loaded " + n + " of " + list.length + " words. Try again for the rest."); btn.disabled = false; }
+  renderBackup(); onData();
+}
+function renderBackup() {
+  const el = $("#backup");
+  if (!el) return;
+  const file = h("input", { type: "file", accept: ".json,application/json", class: "visually-hidden", id: "backup-file",
+    onchange: e => { const f = e.target.files && e.target.files[0]; if (f) readBackup(f); e.target.value = ""; } });
+  const kids = [h("h3", {}, "Backup"),
+    h("p", { class: "muted small" }, "Your words and progress live in this page's database on claude.ai. Save a backup file now and then, so you can bring everything back if something goes wrong."),
+    h("div", { class: "row" },
+      h("button", { class: "btn sm", type: "button", disabled: !words.length, onclick: e => downloadBackup(e.currentTarget) }, "Download backup"),
+      h("label", { class: "btn sm", for: "backup-file", tabindex: "0", onkeydown: e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); file.click(); } } }, "Load backup"), file)];
+  if (pendingBackup) {
+    const { b, list, update } = pendingBackup;
+    kids.push(h("div", { class: "note confirm" },
+      h("p", {}, "Backup from " + (b.exported ? new Date(b.exported).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" }) : "an unknown date") + ": " + list.length + " words. "
+        + (update ? update + " of them are already in your box; their card and progress will be replaced by the backup's. " : "")
+        + (list.length - update ? (list.length - update) + " will be added. " : "") + "Words that aren't in the backup stay as they are."),
+      h("div", { class: "row" },
+        h("button", { class: "btn sm primary", type: "button", onclick: e => loadBackup(e.currentTarget) }, "Load " + list.length + " words"),
+        h("button", { class: "btn sm ghost", type: "button", onclick: () => { pendingBackup = null; renderBackup(); } }, "Cancel"))));
+  }
+  el.replaceChildren(h("div", { class: "scard" }, ...kids));
+}
+
 // ---------- my words ----------
 function renderWords() {
   const s = $("#search");
   s.value = query;
   s.oninput = () => { query = s.value; renderWordList(); };
   renderWordList();
+  renderBackup();
 }
 function renderWordList() {
   const groups = [["all", "All"], ["der", "der"], ["die", "die"], ["das", "das"], ["other", "Not nouns"]];
