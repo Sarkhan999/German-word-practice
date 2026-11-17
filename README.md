@@ -45,7 +45,7 @@ The Stats tab shows reviews per day for the last 14 days, how many reviews are d
 
 ## Lessons
 
-The Lessons tab holds ready-made A1 lessons by topic, about 20 words each: greetings, about me, family, numbers, time, food, home, daily routine, useful verbs, adjectives and colours, question words, and getting around town. Starting a lesson adds only the words you don't have yet. Once most words in your started lessons reach box 2 in Flashcards, the next lesson is marked "Up next". **Pause** takes a started lesson's words out of practice and the Due count until you press **Resume**; their progress is kept.
+The Lessons tab holds ready-made A1 lessons by topic, about 20 words each: greetings, about me, family, numbers, time, food, home, daily routine, useful verbs, adjectives and colours, question words, getting around town, and jobs (Bist du Lehrer?). Starting a lesson adds only the words you don't have yet. Once most words in your started lessons reach box 2 in Flashcards, the next lesson is marked "Up next". **Pause** takes a started lesson's words out of practice and the Due count until you press **Resume**; their progress is kept.
 
 ## Adding words
 
