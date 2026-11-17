@@ -1,4 +1,4 @@
-# Wortkiste
+# German Word Box
 
 A German word trainer for beginners. You add words, and Claude writes a card for each one: the article (der/die/das), the plural, an easy example sentence with an English translation, and a tip.
 

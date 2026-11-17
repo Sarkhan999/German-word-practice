@@ -1,4 +1,4 @@
-# Wortkiste backlog
+# German Word Box backlog
 
 Ideas for future improvements, most important first. Tick an item when it's done.
 

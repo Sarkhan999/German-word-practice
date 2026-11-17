@@ -1,6 +1,6 @@
 {
-  "name": "Wortkiste",
-  "short_name": "Wortkiste",
+  "name": "German Word Box",
+  "short_name": "Word Box",
   "description": "A German word trainer for beginners.",
   "start_url": "./",
   "scope": "./",

@@ -1,4 +1,4 @@
-<title>Wortkiste</title>
+<title>German Word Box</title>
 <meta charset="utf-8">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="manifest" href="manifest.json">
@@ -6,7 +6,7 @@
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Wortkiste">
+<meta name="apple-mobile-web-app-title" content="Word Box">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#15171C">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -265,7 +265,7 @@ label.btn { cursor: pointer; }
     <div class="brand">
       <div class="mark" aria-hidden="true"><i class="g-der"></i><i class="g-die"></i><i class="g-das"></i></div>
       <div>
-        <h1>Wortkiste</h1>
+        <h1>German Word Box</h1>
         <p>Your German word box: add words, then practise them until they stick.</p>
       </div>
     </div>
@@ -334,11 +334,11 @@ label.btn { cursor: pointer; }
         </ul>
       </section>
       <section>
-        <h3>Put Wortkiste on your iPhone home screen</h3>
+        <h3>Put German Word Box on your iPhone home screen</h3>
         <ul>
           <li>Open this page in Safari, signed in to claude.ai.</li>
           <li>Tap the Share button (the square with an arrow), then <b>Add to Home Screen</b>, then <b>Add</b>.</li>
-          <li>Wortkiste now opens from its own icon, straight to your words. Your progress is the same as on every other device.</li>
+          <li>German Word Box now opens from its own icon, straight to your words. Your progress is the same as on every other device.</li>
         </ul>
       </section>
       <section>
@@ -1121,7 +1121,7 @@ function backupData() {
   return { app: "wortkiste", version: 1, exported: new Date().toISOString(), meta: m, words: words.map(({ draft, ...w }) => w) };
 }
 async function downloadBackup(btn) {
-  const text = JSON.stringify(backupData(), null, 1), name = "wortkiste-backup-" + dayKey() + ".json";
+  const text = JSON.stringify(backupData(), null, 1), name = "german-word-box-backup-" + dayKey() + ".json";
   const dl = await downloadsP;
   if (dl) {
     btn.disabled = true;
@@ -1142,7 +1142,7 @@ function readBackup(file) {
       const list = b.words.filter(w => w && typeof w === "object" && w.word && w.id);
       const have = new Set(words.map(w => w.id));
       pendingBackup = { b, list, update: list.filter(w => have.has(w.id)).length };
-    } catch { pendingBackup = null; toast("That file isn't a Wortkiste backup."); }
+    } catch { pendingBackup = null; toast("That file isn't a German Word Box backup."); }
     renderBackup();
   };
   r.readAsText(file);
