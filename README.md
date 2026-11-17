@@ -73,4 +73,4 @@ A scheduled task checks your words once a day and sends a notification to your p
 
 ## Updating the live page
 
-Edit the files, then ask Claude to republish them to the same artifact URL above. The page needs the `db`, `user`, `sample` and `downloads` capabilities.
+Edit the files, then ask Claude to republish them to the same artifact URL above. The page needs the `db`, `user`, `sample` and `downloads` capabilities. Commit the same change here, so git matches the live page.
