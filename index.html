@@ -117,6 +117,7 @@ body.practising .card { padding: 18px; gap: 12px; }
 .kicker { font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
 .big { font-family: var(--display); font-size: clamp(2.3rem, 9vw, 3.6rem); font-weight: 700; line-height: 1.02; overflow-wrap: anywhere; }
 .big.en { font-size: clamp(1.8rem, 7vw, 2.6rem); font-weight: 600; }
+.big.sentence { font-size: clamp(1.6rem, 6vw, 2.3rem); font-weight: 600; }
 .arts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .art { font: 700 1.5rem var(--display); padding: 12px 6px; border-radius: 10px; border: 2px solid var(--g);
   background: var(--gbg); color: var(--g); cursor: pointer; }
@@ -386,6 +387,7 @@ const MODES = [
   { id: "listen", name: "Listen", desc: "Hear a German word and type what you hear." },
   { id: "type", name: "Type it", desc: "See the English meaning and type the German, with the article." },
   { id: "gap", name: "Fill the gap", desc: "Complete an easy sentence with the missing word." },
+  { id: "jobs", name: "Sentences", desc: "Change a sentence with a job word: make it about a woman or a man, ask a question, or answer Nein." },
 ];
 const LESSONS = (window.LESSONS || []).map((l, i) => ({ ...l, n: i + 1 }));
 const TABS = ["practice", "lessons", "words", "stats", "add", "rules"];
@@ -413,7 +415,7 @@ function h(tag, attrs, ...kids) {
 }
 const gclass = w => "g-" + (w.article || "none");
 const label = w => (w.article ? w.article + " " : "") + w.word;
-const MODE_IDS = ["cards", "reverse", "article", "listen", "type", "gap"];
+const MODE_IDS = ["cards", "reverse", "article", "listen", "type", "gap", "jobs"];
 // Each practice mode keeps its own box per word: knowing a flashcard doesn't mean you can type it.
 function prog(w, m) {
   const p = w.progress && w.progress[m];
@@ -421,7 +423,7 @@ function prog(w, m) {
   if (m === "cards" && w.box) return { box: w.box, due: w.due || 0, seen: w.seen || 0, right: w.right || 0 }; // progress saved before modes were split
   return { box: 1, due: 0, seen: 0, right: 0 };
 }
-const appliesTo = (w, m) => m === "article" ? !!w.article : m === "gap" ? !!gapParts(w) : m === "listen" ? canSpeak : true;
+const appliesTo = (w, m) => m === "article" ? !!w.article : m === "gap" ? !!gapParts(w) : m === "listen" ? canSpeak : m === "jobs" ? !!jobPair(w) : true;
 const isDueIn = (w, m) => (prog(w, m).due || 0) <= Date.now();
 const weakest = w => Math.min(...MODE_IDS.filter(m => appliesTo(w, m)).map(m => prog(w, m).box || 1));
 const dueCount = () => activeWords().reduce((n, w) => n + (held().has(w.id) ? 0 : MODE_IDS.filter(m => appliesTo(w, m) && unlocked(w, m) && isDueIn(w, m)).length), 0);
@@ -437,7 +439,7 @@ function gapParts(w) {
   return i < 0 ? null : [s.slice(0, i), s.slice(i, i + g.length), s.slice(i + g.length)];
 }
 // Recall modes open for a word once it reaches box 2 in Flashcards, and stay open after the first try.
-const LOCKED_UNTIL_CARDS = ["reverse", "listen", "type", "gap"];
+const LOCKED_UNTIL_CARDS = ["reverse", "listen", "type", "gap", "jobs"];
 const unlocked = (w, m) => !LOCKED_UNTIL_CARDS.includes(m) || prog(w, "cards").box >= 2 || prog(w, m).seen > 0;
 const applicable = mode => setWords().filter(w => appliesTo(w, mode));
 const wkey = (word, article) => norm(word) + "|" + (article || "");
@@ -801,7 +803,7 @@ function renderPractice() {
     const all = applicable(m.id), pool = eligible(m.id), due = pool.filter(w => isDueIn(w, m.id)).length;
     const mastered = all.filter(w => prog(w, m.id).box >= 5).length, locked = all.length - pool.length;
     const pill = !all.length ? (m.id === "listen" && !canSpeak ? "This browser can't speak German"
-        : practiceSet === "hard" ? "No hard words here" : practiceSet === "own" ? "No own words here" : m.id === "article" ? "No nouns here" : m.id === "gap" ? "No example sentences yet" : "Nothing to practise")
+        : practiceSet === "hard" ? "No hard words here" : practiceSet === "own" ? "No own words here" : m.id === "article" ? "No nouns here" : m.id === "gap" ? "No example sentences yet" : m.id === "jobs" ? "No job words here. Start lesson 13" : "Nothing to practise")
       : !pool.length && all.some(w => held().has(w.id)) && !all.some(w => !held().has(w.id) && unlocked(w, m.id)) ? "New-word limit reached · more tomorrow"
       : !pool.length ? "Locked: get words to box 2 in Flashcards"
       : due ? due + " due now" : "All done · next " + whenText(Math.min(...pool.map(w => prog(w, m.id).due || 0)));
@@ -812,7 +814,7 @@ function renderPractice() {
         all.length ? h("span", { class: "muted small" }, mastered + " / " + all.length + " mastered" + (locked && pool.length ? " · " + locked + " locked" : "")) : null)));
   }
   el.append(grid, h("p", { class: "muted small" },
-    "Rounds only show words that are due. A word in box 1 comes back right away, box 2 after 1 day, box 3 after 3 days, box 4 after 7 days and box 5 after 14 days. Words become due at the start of the day (from 4 am), not at the minute you answered them. Every further right answer in box 5 stretches the gap to 30, 60 and then 120 days. When nothing is due, you can still do an extra round, but it doesn't change your boxes. Words you miss come back once at the end of the same round for another try; that retry doesn't change their box. Each mode tracks its own progress. A right answer moves the word up one box (1 → 5) in that mode only, so you see it less often there. A wrong answer moves it down two boxes in that mode (box 5 → 3, box 4 → 2, box 3 or 2 → 1). A word counts as mastered when it reaches box 5 in every mode that applies to it. English → German, Listen, Type it and Fill the gap open for a word once it reaches box 2 in Flashcards, so you only recall and write words you already recognise. New words are limited per day (you choose how many above), so a big lesson doesn't flood your Due count: the oldest new words come first, the rest wait for later days. In typed answers, one wrong letter in a longer word counts as “Almost”: you see the right spelling and choose whether it counts as right or wrong. Hard words are the ones you got wrong last time or get right less than 60% of the time."));
+    "Rounds only show words that are due. A word in box 1 comes back right away, box 2 after 1 day, box 3 after 3 days, box 4 after 7 days and box 5 after 14 days. Words become due at the start of the day (from 4 am), not at the minute you answered them. Every further right answer in box 5 stretches the gap to 30, 60 and then 120 days. When nothing is due, you can still do an extra round, but it doesn't change your boxes. Words you miss come back once at the end of the same round for another try; that retry doesn't change their box. Each mode tracks its own progress. A right answer moves the word up one box (1 → 5) in that mode only, so you see it less often there. A wrong answer moves it down two boxes in that mode (box 5 → 3, box 4 → 2, box 3 or 2 → 1). A word counts as mastered when it reaches box 5 in every mode that applies to it. English → German, Listen, Type it, Fill the gap and Sentences open for a word once it reaches box 2 in Flashcards, so you only recall and write words you already recognise. New words are limited per day (you choose how many above), so a big lesson doesn't flood your Due count: the oldest new words come first, the rest wait for later days. In typed answers, one wrong letter in a longer word counts as “Almost”: you see the right spelling and choose whether it counts as right or wrong. Hard words are the ones you got wrong last time or get right less than 60% of the time."));
 }
 // A normal round holds only words that are due. With nothing due, an extra round reviews everything but saves no boxes,
 // so reviewing early can't push a word ahead of its schedule.
@@ -829,7 +831,8 @@ function next() { session.i++; session.state = "ask"; session.almost = false; se
 function answer(w, ok) {
   if (session.state !== "ask") return;
   session.state = "done";
-  if (session.mode !== "cards" && session.mode !== "reverse") sayAnswer(w); // the flashcard modes speak when the answer is shown
+  if (session.mode === "jobs") { if (sayOn && canSpeak) speak(w.drill.answer); }
+  else if (session.mode !== "cards" && session.mode !== "reverse") sayAnswer(w); // the flashcard modes speak when the answer is shown
   // A missed word comes back once at the end of this round. The retry is practice only: its box was set by the first answer.
   if (w.retry) return;
   if (ok) session.right++;
@@ -861,7 +864,7 @@ function renderSession() {
     h("div", { class: "prog" }, h("i", { style: "width:" + (s.i / total * 100) + "%" })),
     h("button", { class: "btn ghost sm", type: "button", onclick: endSession }, s.i >= total ? "Close" : "✕ End")));
   if (s.i >= total) { el.append(summary()); focusIn(el); return; }
-  el.append({ cards: cardFlash, reverse: cardReverse, article: cardArticle, listen: cardListen, type: cardType, gap: cardGap }[s.mode](w));
+  el.append({ cards: cardFlash, reverse: cardReverse, article: cardArticle, listen: cardListen, type: cardType, gap: cardGap, jobs: cardJobs }[s.mode](w));
   focusIn(el);
   if (s.state === "ask" && !s.played) { s.played = true; sayCard(w, s.mode); }
 }
@@ -977,7 +980,7 @@ function typedForm(w, input, body, check, giveUp, after) {
       // One letter off: show the right spelling and let the learner choose how it counts.
       session.almost = true;
       keys.hidden = true;
-      const right = session.mode === "gap" ? gapParts(w)[1] : label(w);
+      const right = session.mode === "gap" ? gapParts(w)[1] : session.mode === "jobs" ? w.drill.answer : label(w);
       const decide = ok => { session.almost = false; finish({ ...fb, almost: false, ok, msg: ok ? "Counted as right. Watch the spelling: " + right + "." : "Counted as wrong. It's " + right + "." }); };
       actions.replaceChildren(h("p", { class: "fb almost" }, fb.msg),
         h("div", { class: "row" },
@@ -1022,6 +1025,69 @@ function cardGap(w) {
         return { ok, msg: ok ? "Richtig!" : "Not quite. The missing word is " + gap + "." }; },
       () => ({ ok: false, given: "", msg: "The missing word is " + gap + "." }),
       () => session.fb.ok ? null : h("p", { class: "gapline " + gclass(w), lang: "de" }, before, h("mark", {}, gap), after)));
+}
+// ---------- Sentences mode (jobs) ----------
+// A job word comes as a pair: der Bäcker / die Bäckerin. The card builds a short sentence from it and asks you to change it.
+const JOB_MAP = new Map();
+for (const [m, f, en] of window.JOB_PAIRS || []) {
+  const pair = { m, f, en };
+  JOB_MAP.set(wkey(m, "der"), pair); JOB_MAP.set(wkey(f, "die"), pair);
+}
+const plainEn = w => String(w.english || "").replace(/\(.*?\)/g, "").split(/[;,]/)[0].trim();
+function jobPair(w) {
+  if (w.article !== "der" && w.article !== "die") return null;
+  const known = JOB_MAP.get(wkey(w.word, w.article));
+  if (known) return known;
+  // Your own words: der X and die X-in both in your box.
+  const n = norm(w.word);
+  const other = w.article === "der" ? words.find(x => x.article === "die" && norm(x.word) === n + "in")
+    : n.endsWith("in") && n.length > 3 ? words.find(x => x.article === "der" && norm(x.word) === n.slice(0, -2)) : null;
+  if (!other) return null;
+  const [m, f] = w.article === "der" ? [w, other] : [other, w];
+  return { m: m.word, f: f.word, en: plainEn(m) || plainEn(f) };
+}
+const aAn = s => (/^[aeiou]/i.test(s) ? "an " : "a ") + s;
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+// One of six changes, picked at random each time the word comes up. The answer always uses this word.
+function makeDrill(w) {
+  const p = jobPair(w), fem = w.article === "die", job = fem ? p.f : p.m, otherJob = fem ? p.m : p.f;
+  const pro = fem ? "sie" : "er", otherPro = fem ? "er" : "sie";
+  const who = fem ? "woman" : "man", en = aAn(p.en);
+  const pool = activeWords().map(jobPair).filter(x => x && x.m !== p.m);
+  const fallback = (window.JOB_PAIRS || []).map(([m, f, en]) => ({ m, f, en })).filter(x => x.m !== p.m);
+  const alt = shuffle(pool.length ? pool : fallback)[0] || { m: "Lehrer", f: "Lehrerin" };
+  const drills = [
+    { task: "Make it about a " + who + ".", prompt: cap(otherPro) + " ist " + otherJob + ".",
+      answer: cap(pro) + " ist " + job + ".", en: (fem ? "She" : "He") + " is " + en + "." },
+    { task: "Make it about my " + (fem ? "wife" : "husband") + ".", prompt: (fem ? "Mein Mann" : "Meine Frau") + " ist " + otherJob + ".",
+      answer: (fem ? "Meine Frau" : "Mein Mann") + " ist " + job + ".", en: "My " + (fem ? "wife" : "husband") + " is " + en + "." },
+    { task: "Make it a question.", prompt: cap(pro) + " ist " + job + ".",
+      answer: "Ist " + pro + " " + job + "?", en: "Is " + (fem ? "she" : "he") + " " + en + "?" },
+    { task: "Ask your friend the same thing (use du).", prompt: "Ich bin " + job + ".",
+      answer: "Bist du " + job + "?", en: "Are you " + en + "?" },
+    { task: "Answer: No, I'm " + en + " (" + who + ").", prompt: "Bist du " + (fem ? alt.f : alt.m) + "?",
+      answer: "Nein, ich bin " + job + ".", en: "No, I'm " + en + ".", optional: "nein " },
+    { task: "Ask about your friend's " + (fem ? "wife" : "husband") + " (use dein).", prompt: "Ist " + (fem ? "dein Mann " : "deine Frau ") + otherJob + "?",
+      answer: "Ist " + (fem ? "deine Frau " : "dein Mann ") + job + "?", en: "Is your " + (fem ? "wife" : "husband") + " " + en + "?" },
+  ];
+  return drills[Math.floor(Math.random() * drills.length)];
+}
+function checkDrill(d, given) {
+  const g = norm(given), exp = norm(d.answer);
+  const short = d.optional && exp.startsWith(d.optional) ? exp.slice(d.optional.length) : null;
+  if (g === exp || g === short) return { ok: true, msg: "Richtig! " + d.answer };
+  if (oneOff(g, exp) || (short && oneOff(g, short))) return { almost: true, msg: "Almost! Check the spelling: " + d.answer };
+  return { ok: false, msg: "Not quite. The answer is: " + d.answer };
+}
+function cardJobs(w) {
+  if (!w.drill) w.drill = makeDrill(w);
+  const d = w.drill, input = answerInput("jobs-input");
+  return h("div", { class: "card" }, h("span", { class: "kicker" }, "Sentences · change it"),
+    h("div", { class: "row" }, h("div", { class: "big sentence", lang: "de" }, d.prompt), speakBtn(d.prompt)),
+    h("p", {}, h("strong", {}, d.task)),
+    typedForm(w, input, input, given => checkDrill(d, given),
+      () => ({ ok: false, given: "", msg: "The answer is: " + d.answer }),
+      () => h("p", { class: "muted" }, d.en)));
 }
 function summary() {
   const { right, items, mode } = session, total = items.filter(x => !x.retry).length, pct = right / total;

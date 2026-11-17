@@ -12,8 +12,9 @@ Live page: https://claude.ai/artifact/D95TwHpzp17kaTQmCey2po
 - **Listen**: hear the word read aloud and type what you hear.
 - **Type it**: see the English, type the German with its article.
 - **Fill the gap**: complete an easy sentence with the missing word.
+- **Sentences**: for job words (der Bäcker / die Bäckerin). Change a short sentence and type the new one: make it about a woman or a man (Er ist Bäcker. → Sie ist Bäckerin.), about my husband or wife, make it a question (Bist du Lehrer?), answer Nein, or ask with dein. The job pairs are listed in `lessons.js`; your own words count too when you have both forms.
 
-English → German, Listen, Type it and Fill the gap open for a word once it reaches box 2 in Flashcards.
+English → German, Listen, Type it, Fill the gap and Sentences open for a word once it reaches box 2 in Flashcards.
 
 ## How words come back
 
@@ -68,7 +69,7 @@ A scheduled task checks your words once a day and sends a notification to your p
 ## Files
 
 - `index.html`: the app itself, with HTML, CSS and JavaScript in one file and no build step.
-- `lessons.js`: the lesson word lists. Each word is `[word, article, plural, type, english, example_de, example_en, gap, tip]`, and `gap` must appear in `example_de`.
+- `lessons.js`: the lesson word lists, and `JOB_PAIRS` (male and female job names) for the Sentences mode. Each word is `[word, article, plural, type, english, example_de, example_en, gap, tip]`, and `gap` must appear in `example_de`.
 - `manifest.json` and `icons/`: the home screen name and icon.
 
 ## Updating the live page

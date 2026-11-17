@@ -360,3 +360,13 @@ window.LESSONS = [
     ],
   },
 ];
+
+// Job words in a male and a female form, for the Sentences mode: [der-form, die-form, english].
+// Own words are paired too when you have both forms (der Maler + die Malerin).
+window.JOB_PAIRS = [
+  ["Lehrer", "Lehrerin", "teacher"], ["Musiker", "Musikerin", "musician"], ["Bäcker", "Bäckerin", "baker"],
+  ["Verkäufer", "Verkäuferin", "shop assistant"], ["Koch", "Köchin", "cook"], ["Kellner", "Kellnerin", "waiter"],
+  ["Arzt", "Ärztin", "doctor"], ["Student", "Studentin", "student"], ["Ingenieur", "Ingenieurin", "engineer"],
+  ["Polizist", "Polizistin", "police officer"], ["Friseur", "Friseurin", "hairdresser"], ["Fahrer", "Fahrerin", "driver"],
+  ["Krankenpfleger", "Krankenpflegerin", "nurse"], ["Schüler", "Schülerin", "pupil"], ["Journalist", "Journalistin", "journalist"],
+];

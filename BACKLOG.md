@@ -39,6 +39,9 @@ Ideas for future improvements, most important first. Tick an item when it's done
 - [x] **Reverse flashcards (English → German)**
   - Why: Flashcards only go from German to English today, and speaking needs the other direction.
   - How: a new mode, or a switch in Flashcards, that shows the English and recalls the German with its article.
+- [x] **Sentences mode (jobs)**
+  - Why: knowing der Bäcker isn't enough; you need "Sie ist Bäckerin." and "Bist du Bäcker?".
+  - How: build a short sentence from a male/female job pair and ask for one change: woman/man, my husband/wife, question, du, Nein, dein.
 - [ ] **Speak it (pronunciation)**
   - Why: saying words aloud helps them stick.
   - How: use the browser's speech recognition to check the word you say. Hide the mode where the browser can't do it.
